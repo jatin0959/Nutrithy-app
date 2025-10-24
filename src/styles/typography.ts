@@ -1,0 +1,1 @@
+export default { title: { fontSize:24, fontWeight:'700' }, body: { fontSize:14 } };

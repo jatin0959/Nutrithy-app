@@ -1,0 +1,1 @@
+export default { primary:'#5BC0BE', primaryDark:'#3A506B', bg:'#0B132B', fg:'#1C2541', text:'#FFFFFF' };

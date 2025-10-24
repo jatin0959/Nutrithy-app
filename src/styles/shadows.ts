@@ -1,0 +1,1 @@
+export default { card: { shadowColor:'#000', shadowOpacity:0.15, shadowRadius:8, elevation:3 } };
