@@ -26,7 +26,13 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-font"
-    ]
+      "expo-font",
+      "expo-asset"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "960215b9-21ed-4d9e-8777-349fa13115e4"
+      }
+    }
   }
 }

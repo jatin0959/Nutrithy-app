@@ -81,7 +81,7 @@ export function ConsultationScreen({ onNavigate }: ConsultationScreenProps) {
   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
   const go = (screen: keyof MainTabParamList | string) => {
     if (typeof onNavigate === 'function') return onNavigate(screen);
-    // @ts-expect-error allow stack routes too
+ 
     navigation.navigate(screen as any);
   };
 

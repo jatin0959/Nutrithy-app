@@ -7,15 +7,13 @@ import {
   Pressable,
   Image,
   ScrollView,
-  FlatList,
   TextInput,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Search, Trophy, Flame, Target, Users, Star, Calendar as CalendarIcon,
   CheckCircle, MessageCircle, Heart, Share2, Plus, MoreHorizontal,
-  ShoppingBag, Sparkles, UserPlus, Send
+  UserPlus, Send
 } from 'lucide-react-native';
 
 interface ThriveScreenProps {
@@ -72,7 +70,7 @@ const groupChallenges = [
     participants: 24,
     daysLeft: 3,
     icon: Target,
-    gradient: ['#ec4899', '#be123c'], // pink->rose
+    gradient: ['#ec4899', '#be123c'],
     image: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=600',
     joined: true,
     progress: 65,
@@ -84,7 +82,7 @@ const groupChallenges = [
     participants: 18,
     daysLeft: 5,
     icon: Trophy,
-    gradient: ['#3b82f6', '#06b6d4'], // blue->cyan
+    gradient: ['#3b82f6', '#06b6d4'],
     image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=600',
     joined: true,
     progress: 80,
@@ -96,7 +94,7 @@ const groupChallenges = [
     participants: 32,
     daysLeft: 7,
     icon: Flame,
-    gradient: ['#8b5cf6', '#4f46e5'], // purple->indigo
+    gradient: ['#8b5cf6', '#4f46e5'],
     image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600',
     joined: false,
     progress: 0,
@@ -117,7 +115,7 @@ const onlineFriends = [
   { id: 3, name: 'Vikram', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200' },
 ];
 
-type Section = 'feed' | 'challenges' | 'leaderboard' | 'chat';
+type Section = 'feed' | 'challenges' | 'leaderboard' | 'thrivetalk';
 
 export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
   const [activeSection, setActiveSection] = useState<Section>('feed');
@@ -127,12 +125,10 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
   const toggleLike = (postId: number) => {
     setLikedPosts((prev) => (prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]));
   };
-
   const toggleFollow = (userId: number) => {
     setFollowedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
   };
 
-  // --- UI ---
   return (
     <View style={s.root}>
       {/* Header */}
@@ -147,13 +143,13 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
           </Pressable>
         </View>
 
-        {/* Section Tabs */}
+        {/* Tabs */}
         <View style={s.tabsRow}>
           {[
             { id: 'feed', label: 'Feed', Icon: Heart },
             { id: 'challenges', label: 'Challenges', Icon: Target },
             { id: 'leaderboard', label: 'Leaderboard', Icon: Trophy },
-            { id: 'chat', label: 'Chat', Icon: MessageCircle },
+            { id: 'thrivetalk', label: 'ThriveTalk', Icon: MessageCircle }, // 🔁 renamed
           ].map((t) => {
             const active = activeSection === (t.id as Section);
             return (
@@ -173,7 +169,7 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
 
       {/* Content */}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
-        {/* FEED */}
+        {/* ===== FEED (Stories on top) ===== */}
         {activeSection === 'feed' && (
           <View>
             {/* Stories */}
@@ -206,7 +202,6 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
                 const isLiked = likedPosts.includes(post.id);
                 return (
                   <View key={post.id} style={s.postCard}>
-                    {/* Header */}
                     <View style={s.postHeader}>
                       <View style={s.row}>
                         <Image source={{ uri: post.user.image }} style={s.postAvatar} />
@@ -220,7 +215,6 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
                       </Pressable>
                     </View>
 
-                    {/* Content */}
                     <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
                       <Text style={s.postText}>{post.content}</Text>
                       {!!post.achievement && (
@@ -231,10 +225,8 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
                       )}
                     </View>
 
-                    {/* Image */}
                     {!!post.image && <Image source={{ uri: post.image }} style={s.postImage} />}
 
-                    {/* Actions */}
                     <View style={{ padding: 12 }}>
                       <View style={s.rowBetween}>
                         <View style={s.row}>
@@ -263,71 +255,10 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
                 );
               })}
             </View>
-
-            {/* Explore more people */}
-            <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-              <Pressable
-                onPress={() => onNavigate('explore-people')}
-                style={s.primaryBtn}
-              >
-                <UserPlus size={20} color="#fff" />
-                <Text style={s.primaryBtnText}>Explore More People</Text>
-              </Pressable>
-            </View>
-
-            {/* Suggested connections */}
-            <View style={s.sectionCard}>
-              <View style={s.rowBetween}>
-                <Text style={s.sectionTitle}>Suggested for You</Text>
-                <Pressable onPress={() => onNavigate('explore-people')}>
-                  <Text style={s.linkPink}>See All</Text>
-                </Pressable>
-              </View>
-
-              <View style={{ rowGap: 8 }}>
-                {[
-                  { id: 5, name: 'Meera Patel', username: '@meera_health', role: 'Health Coach', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200', mutualFriends: 3 },
-                  { id: 6, name: 'Arjun Kapoor', username: '@arjun_fitness', role: 'Fitness Trainer', image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200', mutualFriends: 5 },
-                ].map((u) => {
-                  const isFollowed = followedUsers.includes(u.id);
-                  return (
-                    <View key={u.id} style={s.suggestItem}>
-                      <View style={s.row}>
-                        <Image source={{ uri: u.image }} style={s.suggestAvatar} />
-                        <View>
-                          <Text style={s.suggestName}>{u.name}</Text>
-                          <Text style={s.suggestUser}>{u.username}</Text>
-                          <Text style={s.suggestMutual}>{u.mutualFriends} mutual connections</Text>
-                        </View>
-                      </View>
-                      <Pressable
-                        onPress={() => toggleFollow(u.id)}
-                        style={[
-                          s.followBtn,
-                          isFollowed ? { backgroundColor: '#e5e7eb' } : { backgroundColor: '#db2777' },
-                        ]}
-                      >
-                        {isFollowed ? (
-                          <>
-                            <CheckCircle size={14} color="#374151" />
-                            <Text style={[s.followText, { color: '#374151' }]}>Following</Text>
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus size={14} color="#fff" />
-                            <Text style={[s.followText, { color: '#fff' }]}>Connect</Text>
-                          </>
-                        )}
-                      </Pressable>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
           </View>
         )}
 
-        {/* CHALLENGES */}
+        {/* ===== CHALLENGES ===== */}
         {activeSection === 'challenges' && (
           <View style={{ padding: 16, rowGap: 16 }}>
             <View>
@@ -385,7 +316,7 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
           </View>
         )}
 
-        {/* LEADERBOARD */}
+        {/* ===== LEADERBOARD ===== */}
         {activeSection === 'leaderboard' && (
           <View style={{ padding: 16 }}>
             <View style={{ marginBottom: 12 }}>
@@ -449,26 +380,28 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
           </View>
         )}
 
-        {/* CHAT */}
-        {activeSection === 'chat' && (
+        {/* ===== THRIVETALK (renamed & refined) ===== */}
+        {activeSection === 'thrivetalk' && (
           <View style={{ padding: 16 }}>
             {/* Search */}
             <View style={{ marginBottom: 12 }}>
               <View style={{ position: 'relative' }}>
                 <Search size={18} color="#9ca3af" style={s.searchIcon} />
                 <TextInput
-                  placeholder="Search messages..."
+                  placeholder="Search ThriveTalk..."
                   placeholderTextColor="#9ca3af"
                   style={s.searchInput}
                 />
               </View>
             </View>
 
-            {/* Online friends */}
+            {/* Online now */}
             <View style={{ marginBottom: 16 }}>
               <View style={s.rowBetween}>
                 <Text style={s.smallMuted}>ONLINE NOW</Text>
-                <Pressable><Text style={s.linkPink}>View All</Text></Pressable>
+                <Pressable onPress={() => onNavigate('explore-people')}>
+                  <Text style={s.linkPink}>Explore</Text>
+                </Pressable>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8 }}>
                 {onlineFriends.map((f) => (
@@ -480,8 +413,8 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
                     <Text numberOfLines={1} style={s.friendName}>{f.name}</Text>
                   </Pressable>
                 ))}
-                {/* Add button */}
-                <Pressable style={{ alignItems: 'center', marginRight: 12 }}>
+                {/* Add */}
+                <Pressable onPress={() => onNavigate('explore-people')} style={{ alignItems: 'center', marginRight: 12 }}>
                   <LinearGradient colors={['#ec4899', '#7c3aed']} style={s.addFriendBtn}>
                     <UserPlus size={24} color="#fff" />
                   </LinearGradient>
@@ -528,7 +461,7 @@ export default function ThriveScreen({ onNavigate }: ThriveScreenProps) {
             <View style={{ marginTop: 16 }}>
               <View style={s.rowBetween}>
                 <Text style={s.smallMuted}>CHALLENGE GROUPS</Text>
-                <Pressable><Text style={s.linkPink}>See All</Text></Pressable>
+                <Pressable onPress={() => onNavigate('explore-people')}><Text style={s.linkPink}>See All</Text></Pressable>
               </View>
               <View style={{ rowGap: 8, marginTop: 8 }}>
                 {groupChallenges.filter((c) => c.joined).map((c) => (
@@ -603,21 +536,12 @@ const s = StyleSheet.create({
   likeMeta: { color: '#6b7280', fontSize: 12, marginTop: 4 },
   bold: { fontWeight: '700' },
 
-  // Section card
-  sectionCard: { backgroundColor: '#fff', marginTop: 8, padding: 16 },
+  // Section
   sectionTitle: { color: '#111827', fontWeight: '800', fontSize: 16 },
   sectionSub: { color: '#6b7280', fontSize: 12, marginTop: 2 },
   linkPink: { color: '#db2777', fontWeight: '600', fontSize: 12 },
 
-  suggestItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12 },
-  suggestAvatar: { width: 48, height: 48, borderRadius: 24, marginRight: 10 },
-  suggestName: { color: '#111827', fontWeight: '700', fontSize: 14 },
-  suggestUser: { color: '#6b7280', fontSize: 12 },
-  suggestMutual: { color: '#9ca3af', fontSize: 12 },
-  followBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, columnGap: 6 },
-  followText: { fontWeight: '700', fontSize: 13 },
-
-  // Primary button
+  // Suggested/connect
   primaryBtn: { backgroundColor: '#db2777', borderRadius: 16, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', columnGap: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
   primaryBtnText: { color: '#fff', fontWeight: '800' },
 
@@ -648,13 +572,13 @@ const s = StyleSheet.create({
   leaderPts: { fontWeight: '800', fontSize: 16, color: '#111827' },
   leaderPtsMeta: { color: '#9ca3af', fontSize: 11 },
 
-  yourStatsCard: { marginTop: 16, borderRadius: 16, padding: 16, backgroundColor: '#fff0', borderWidth: 1, borderColor: '#fce7f3', backgroundGradient: undefined, },
+  yourStatsCard: { marginTop: 16, borderRadius: 16, padding: 16, backgroundColor: '#fff0', borderWidth: 1, borderColor: '#fce7f3' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   statBox: { width: '47%', backgroundColor: '#fff', borderRadius: 12, padding: 12, alignItems: 'center' },
   statBoxValue: { color: '#111827', fontWeight: '800', fontSize: 18, marginTop: 6 },
   statBoxLabel: { color: '#6b7280', fontSize: 12 },
 
-  // Chat
+  // Chat (ThriveTalk)
   searchIcon: { position: 'absolute', left: 12, top: 12 },
   searchInput: { backgroundColor: '#fff', paddingVertical: 10, paddingLeft: 40, paddingRight: 14, borderRadius: 999, borderWidth: 1, borderColor: '#e5e7eb', color: '#111827' },
   smallMuted: { color: '#6b7280', fontSize: 12, fontWeight: '600' },

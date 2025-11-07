@@ -8,577 +8,568 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft,
-  Search,
+  Calendar,
   Clock,
-  Star,
+  CheckCircle2,
+  Check,
   Heart,
-  Sparkles,
-  ChevronRight,
-  Filter,
+  Activity,
+  Brain,
+  Moon,
+  Scale,
   Utensils,
-  Dumbbell,
-  Wind,
-  Stethoscope,
+  User,
+  Star,
+  Upload,
 } from 'lucide-react-native';
-
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { ServicesStackParamList } from '../../navigation/ServicesStack'; // from the stack you created
+import type { NavigationProp } from '@react-navigation/native';
+import type { MainTabParamList } from '../../navigation/MainNavigator';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+type Step = 'dashboard' | 'form' | 'submitted';
 
-type CategoryKey = 'all' | 'nutrition' | 'fitness' | 'wellness' | 'therapy';
-
-const serviceCategories: Array<{
-  id: CategoryKey;
-  name: string;
-  icon: any;
-}> = [
-  { id: 'all', name: 'All', icon: Sparkles },
-  { id: 'nutrition', name: 'Nutrition', icon: Utensils },
-  { id: 'fitness', name: 'Fitness', icon: Dumbbell },
-  { id: 'wellness', name: 'Wellness', icon: Wind },
-  { id: 'therapy', name: 'Therapy', icon: Stethoscope },
+const healthConcerns = [
+  { id: 'weight', label: 'Weight Management', icon: Scale },
+  { id: 'nutrition', label: 'Nutrition & Diet', icon: Utensils },
+  { id: 'fitness', label: 'Fitness & Exercise', icon: Activity },
+  { id: 'mental', label: 'Mental Wellness', icon: Brain },
+  { id: 'sleep', label: 'Sleep Issues', icon: Moon },
+  { id: 'heart', label: 'Heart Health', icon: Heart },
 ];
 
-const services = [
+const benefits = [
   {
-    id: 1,
-    name: 'Personal Nutrition Consultation',
-    category: 'nutrition',
-    provider: 'Dr. Meera Patel',
-    providerImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
-    price: 500,
-    originalPrice: 700,
-    duration: '45 min',
-    rating: 4.9,
-    reviews: 234,
-    image: 'https://images.unsplash.com/photo-1759177670217-72ddf0f95b7d?w=600',
-    tag: 'Popular',
-    available: true,
+    title: 'Personalized Matching',
+    sub: 'We assign the best consultant based on your health concerns',
+    iconBg: '#eef2ff',
+    iconTint: '#6366f1',
   },
   {
-    id: 2,
-    name: 'Yoga Class (Group)',
-    category: 'fitness',
-    provider: 'Anita Wellness Center',
-    providerImage: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200',
-    price: 300,
-    duration: '60 min',
-    rating: 4.8,
-    reviews: 189,
-    image: 'https://images.unsplash.com/photo-1619781458519-5c6115c0ee98?w=600',
-    tag: 'Bestseller',
-    available: true,
+    title: 'Expert Professionals',
+    sub: 'Certified nutrition & wellness experts with years of experience',
+    iconBg: '#ecfeff',
+    iconTint: '#06b6d4',
   },
   {
-    id: 3,
-    name: 'Personal Training Session',
-    category: 'fitness',
-    provider: 'Rahul Fitness',
-    providerImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
-    price: 800,
-    originalPrice: 1000,
-    duration: '60 min',
-    rating: 4.9,
-    reviews: 312,
-    image: 'https://images.unsplash.com/photo-1745329532589-4f33352c4b10?w=600',
-    tag: 'Premium',
-    available: true,
+    title: 'Flexible Scheduling',
+    sub: 'Book at your convenience with easy rescheduling',
+    iconBg: '#fff7ed',
+    iconTint: '#f59e0b',
   },
   {
-    id: 4,
-    name: 'Meditation & Mindfulness',
-    category: 'wellness',
-    provider: 'Zen Wellness Studio',
-    providerImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
-    price: 400,
-    duration: '45 min',
-    rating: 4.7,
-    reviews: 156,
-    image: 'https://images.unsplash.com/photo-1562088287-bde35a1ea917?w=600',
-    tag: 'New',
-    available: true,
-  },
-  {
-    id: 5,
-    name: 'Therapeutic Massage',
-    category: 'therapy',
-    provider: 'Healing Touch Spa',
-    providerImage: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
-    price: 1200,
-    originalPrice: 1500,
-    duration: '90 min',
-    rating: 4.9,
-    reviews: 278,
-    image: 'https://images.unsplash.com/photo-1737352777897-e22953991a32?w=600',
-    tag: 'Premium',
-    available: true,
-  },
-  {
-    id: 6,
-    name: 'Mental Health Counseling',
-    category: 'therapy',
-    provider: 'Dr. Vikram Singh',
-    providerImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200',
-    price: 1500,
-    duration: '60 min',
-    rating: 5.0,
-    reviews: 198,
-    image: 'https://images.unsplash.com/photo-1581461356013-c5229dcb670c?w=600',
-    tag: 'Top Rated',
-    available: true,
-  },
-  {
-    id: 7,
-    name: 'Diet Planning Service',
-    category: 'nutrition',
-    provider: 'Nutritionist Priya',
-    providerImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
-    price: 600,
-    originalPrice: 800,
-    duration: '30 min',
-    rating: 4.8,
-    reviews: 145,
-    image: 'https://images.unsplash.com/photo-1670164747721-d3500ef757a6?w=600',
-    tag: 'Popular',
-    available: true,
-  },
-  {
-    id: 8,
-    name: 'Zumba Dance Class',
-    category: 'fitness',
-    provider: 'Dance Fitness Hub',
-    providerImage: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200',
-    price: 350,
-    duration: '60 min',
-    rating: 4.7,
-    reviews: 167,
-    image: 'https://images.unsplash.com/photo-1520877880798-5ee004e3f11e?w=600',
-    tag: 'Fun',
-    available: true,
-  },
-  {
-    id: 9,
-    name: 'Stress Management Workshop',
-    category: 'wellness',
-    provider: 'Wellness Warriors',
-    providerImage: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
-    price: 900,
-    duration: '120 min',
-    rating: 4.8,
-    reviews: 89,
-    image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600',
-    tag: 'Workshop',
-    available: true,
-  },
-  {
-    id: 10,
-    name: 'Prenatal Yoga',
-    category: 'wellness',
-    provider: 'Mother Care Studio',
-    providerImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
-    price: 450,
-    duration: '60 min',
-    rating: 4.9,
-    reviews: 234,
-    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600',
-    tag: 'Specialized',
-    available: true,
-  },
-  {
-    id: 11,
-    name: 'Sports Nutrition Consult',
-    category: 'nutrition',
-    provider: 'Dr. Arjun Kapoor',
-    providerImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200',
-    price: 700,
-    duration: '45 min',
-    rating: 4.9,
-    reviews: 178,
-    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600',
-    tag: 'Specialized',
-    available: true,
-  },
-  {
-    id: 12,
-    name: 'Pilates Class',
-    category: 'fitness',
-    provider: 'Core Strength Studio',
-    providerImage: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200',
-    price: 500,
-    duration: '60 min',
-    rating: 4.8,
-    reviews: 201,
-    image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600',
-    tag: 'Trending',
-    available: true,
-  },
-  {
-    id: 13,
-    name: 'Sleep Therapy Session',
-    category: 'therapy',
-    provider: 'Sleep Wellness Center',
-    providerImage: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
-    price: 1100,
-    duration: '60 min',
-    rating: 4.7,
-    reviews: 92,
-    image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=600',
-    tag: 'New',
-    available: true,
-  },
-  {
-    id: 14,
-    name: 'Weight Management Program',
-    category: 'nutrition',
-    provider: 'Health First Clinic',
-    providerImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
-    price: 2000,
-    originalPrice: 2500,
-    duration: '90 min',
-    rating: 4.9,
-    reviews: 267,
-    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600',
-    tag: 'Program',
-    available: true,
-  },
-  {
-    id: 15,
-    name: 'Acupuncture Therapy',
-    category: 'therapy',
-    provider: 'Alternative Healing',
-    providerImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200',
-    price: 1300,
-    duration: '60 min',
-    rating: 4.8,
-    reviews: 143,
-    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600',
-    tag: 'Alternative',
-    available: true,
+    title: 'Follow-up Support',
+    sub: 'Stick with the same consultant for consistent care',
+    iconBg: '#fffbeb',
+    iconTint: '#f97316',
   },
 ];
 
-export default function ServicesScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<ServicesStackParamList>>();
-  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('all');
-  const [favorites, setFavorites] = useState<number[]>([]);
-  const [query, setQuery] = useState('');
+const relatableProblems = [
+  'Struggling to lose weight despite trying diets',
+  'Confused about what & when to eat',
+  'Low energy or poor sleep',
+  'Stress eating or mood swings',
+  'High cholesterol / sugar management',
+  'Getting back to fitness after a break',
+];
 
-  const filteredServices = useMemo(() => {
-    let list =
-      selectedCategory === 'all'
-        ? services
-        : services.filter((s) => s.category === selectedCategory);
-
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      list = list.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.provider.toLowerCase().includes(q) ||
-          s.tag.toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [selectedCategory, query]);
-
-  const toggleFavorite = (id: number) => {
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
+export default function ServicesScreen({
+  onNavigate,
+}: {
+  onNavigate?: (screen: string) => void;
+}) {
+  const navigation = useNavigation<NavigationProp<MainTabParamList>>();
+  const go = (screen: keyof MainTabParamList | string) => {
+    if (onNavigate) return onNavigate(screen as string);
+    navigation.navigate(screen as any);
   };
 
-  const goToConsultation = (svc: { id: number; name: string }) => {
-    navigation.navigate('Consultation', { serviceId: svc.id, serviceName: svc.name });
+  const [step, setStep] = useState<Step>('dashboard');
+  const [selectedConcerns, setSelectedConcerns] = useState<string[]>([]);
+  const [problemDescription, setProblemDescription] = useState('');
+  const [hasUploadedFile, setHasUploadedFile] = useState(false);
+
+  const assignedConsultant = {
+    name: 'Dr. Anjali Mehta',
+    specialization: 'Senior Nutritionist',
+    experience: '12 years',
+    rating: 4.9,
+    reviews: 234,
+    image:
+      'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200',
+    nextAvailable: 'Tomorrow, 10:00 AM',
   };
 
-  return (
-    <View style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <View style={s.headerRow}>
-          <Pressable
-            onPress={() => navigation.getParent()?.navigate('Home')}
-            style={s.iconBtn}
-          >
-            <ArrowLeft size={20} color="#374151" />
-          </Pressable>
-          <Text style={s.title}>Services</Text>
-          <Pressable style={s.iconBtn}>
-            <Filter size={20} color="#374151" />
-          </Pressable>
-        </View>
+  const previousConsultations = [
+    {
+      id: 'c1',
+      title: 'Weight Loss Program',
+      consultant: 'Dr. Anjali Mehta',
+      date: 'Aug 12, 2025',
+      status: 'Completed',
+    },
+    {
+      id: 'c2',
+      title: 'Sleep & Stress Review',
+      consultant: 'Dr. Karan Shah',
+      date: 'Jul 02, 2025',
+      status: 'Completed',
+    },
+  ];
 
-        {/* Search */}
-        <View style={{ position: 'relative', marginBottom: 12 }}>
-          <Search size={18} color="#9ca3af" style={s.searchIcon} />
-          <TextInput
-            placeholder="Search services..."
-            placeholderTextColor="#9ca3af"
-            value={query}
-            onChangeText={setQuery}
-            style={s.searchInput}
-          />
-        </View>
+  const toggleConcern = (id: string) => {
+    setSelectedConcerns((p) =>
+      p.includes(id) ? p.filter((x) => x !== id) : [...p, id]
+    );
+  };
 
-        {/* Categories */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-          <View style={s.catRow}>
-            {serviceCategories.map((c) => {
-              const active = selectedCategory === c.id;
-              const Icon = c.icon;
-              return (
-                <Pressable
-                  key={c.id}
-                  onPress={() => setSelectedCategory(c.id)}
-                  style={[s.catChip, active ? s.catChipActive : s.catChipInactive]}
-                >
-                  <Icon size={16} color={active ? '#fff' : '#374151'} />
-                  <Text style={active ? s.catTextActive : s.catTextInactive}>{c.name}</Text>
-                </Pressable>
-              );
-            })}
+  const submitForm = () => setStep('submitted');
+
+  /* ---------------- Dashboard ---------------- */
+  if (step === 'dashboard') {
+    return (
+      <View style={st.container}>
+        {/* App-ish header */}
+        <View style={st.header}>
+          <View style={st.headerRow}>
+            <Pressable onPress={() => navigation.goBack()} style={st.iconBtn}>
+              <ArrowLeft size={18} color="#374151" />
+            </Pressable>
+            <Text style={st.title}>Services</Text>
+            <View style={{ width: 28 }} />
           </View>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Gradient hero with CTA */}
+          <LinearGradient
+            colors={['#ef3a8a', '#8b5cf6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={st.hero}
+          >
+            <View>
+              <View style={st.heroIconWrap}>
+                <Activity size={24} color="#fff" />
+              </View>
+              <Text style={st.heroTitle}>Expert Consultation</Text>
+              <Text style={st.heroSub}>
+                Tell us about your health concern and we’ll connect you with the
+                perfect consultant for your needs.
+              </Text>
+            </View>
+
+            <Pressable onPress={() => setStep('form')} style={st.heroCtaWrap}>
+              <View style={st.heroCtaShadow}>
+                <Text style={st.heroCta}>Book Consultation Now</Text>
+              </View>
+            </Pressable>
+          </LinearGradient>
+
+          {/* Why choose */}
+          <Text style={st.sectionTitle}>Why Choose Our Consultations?</Text>
+          <View style={{ rowGap: 10 }}>
+            {benefits.map((b, idx) => (
+              <View key={idx} style={st.benefitCard}>
+                <View style={[st.benefitIcon, { backgroundColor: b.iconBg }]}>
+                  <CheckCircle2 size={18} color={b.iconTint} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.benefitTitle}>{b.title}</Text>
+                  <Text style={st.benefitSub}>{b.sub}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Previous consultations */}
+          <Text style={[st.sectionTitle, { marginTop: 16 }]}>
+            Your Previous Consultations
+          </Text>
+          <View style={{ rowGap: 10 }}>
+            {previousConsultations.map((c) => (
+              <View key={c.id} style={st.prevCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.prevTitle}>{c.title}</Text>
+                  <Text style={st.prevSub}>
+                    {c.consultant} • {c.date}
+                  </Text>
+                </View>
+                <Text style={st.prevBadge}>{c.status}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Relatable problems */}
+          <Text style={[st.sectionTitle, { marginTop: 16 }]}>
+            Health Concerns We Address
+          </Text>
+          <View style={st.problemWrap}>
+            {relatableProblems.map((p) => (
+              <View key={p} style={st.problemPill}>
+                <Text style={st.problemText}>{p}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* CTA */}
+          <Pressable onPress={() => setStep('form')} style={{ marginTop: 16 }}>
+            <LinearGradient
+              colors={['#ec4899', '#8b5cf6']}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={st.primaryBtn}
+            >
+              <Text style={st.primaryBtnText}>Start Booking</Text>
+            </LinearGradient>
+          </Pressable>
         </ScrollView>
       </View>
+    );
+  }
 
-      {/* Services List */}
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
-        <View style={{ rowGap: 12 }}>
-          {filteredServices.map((service) => {
-            const isFavorite = favorites.includes(service.id);
-            const saved = service.originalPrice ? service.originalPrice - service.price : 0;
+  /* ---------------- Submitted ---------------- */
+  if (step === 'submitted') {
+    return (
+      <View style={st.container}>
+        <View style={st.header}>
+          <View style={st.headerRow}>
+            <Pressable onPress={() => setStep('dashboard')} style={st.iconBtn}>
+              <ArrowLeft size={18} color="#374151" />
+            </Pressable>
+            <Text style={st.title}>Consultation Assigned</Text>
+            <View style={{ width: 28 }} />
+          </View>
+        </View>
 
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={st.successIcon}>
+            <CheckCircle2 size={40} color="#16a34a" />
+          </View>
+          <Text style={st.successTitle}>Consultant Assigned!</Text>
+          <Text style={st.successSub}>
+            Based on your health concerns, we’ve assigned you the best
+            consultant for your needs.
+          </Text>
+
+          {/* Consultant card */}
+          <View style={st.assignedCard}>
+            <View style={{ flexDirection: 'row', columnGap: 12 }}>
+              <Image source={{ uri: assignedConsultant.image }} style={st.docImg} />
+              <View style={{ flex: 1 }}>
+                <Text style={st.docName}>{assignedConsultant.name}</Text>
+                <Text style={st.docRole}>{assignedConsultant.specialization}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 6 }}>
+                  <Star size={12} color="#facc15" fill="#facc15" />
+                  <Text style={st.docRating}>
+                    {assignedConsultant.rating} ({assignedConsultant.reviews} reviews)
+                  </Text>
+                </View>
+                <Text style={st.docExp}>{assignedConsultant.experience} experience</Text>
+              </View>
+            </View>
+
+            <View style={st.nextAvail}>
+              <Calendar size={16} color="#2563eb" />
+              <View style={{ marginLeft: 8 }}>
+                <Text style={st.nextAvailLbl}>Next Available</Text>
+                <Text style={st.nextAvailVal}>{assignedConsultant.nextAvailable}</Text>
+              </View>
+            </View>
+
+            <Text style={st.expertLbl}>Areas of Expertise</Text>
+            <View style={st.expertRow}>
+              {['Weight Management', 'Nutrition Planning', 'Chronic Disease'].map((t) => (
+                <View key={t} style={st.tag}>
+                  <Text style={st.tagText}>{t}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Your concerns summary */}
+          <View style={st.summaryCard}>
+            <Text style={st.summaryTitle}>Your Concerns</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {selectedConcerns.map((cid) => {
+                const c = healthConcerns.find((x) => x.id === cid);
+                return (
+                  <View key={cid} style={st.concernChip}>
+                    {c?.icon ? <c.icon size={14} color="#6b7280" /> : null}
+                    <Text style={st.concernChipText}>{c?.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+            {problemDescription ? (
+              <>
+                <Text style={st.summaryNoteLbl}>Description</Text>
+                <Text style={st.summaryNote}>{problemDescription}</Text>
+              </>
+            ) : null}
+          </View>
+
+          <Pressable onPress={() => go('consultation')} style={{ marginTop: 8 }}>
+            <LinearGradient
+              colors={['#ec4899', '#8b5cf6']}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={st.primaryBtn}
+            >
+              <Text style={st.primaryBtnText}>Book Consultation</Text>
+            </LinearGradient>
+          </Pressable>
+
+          <Pressable onPress={() => setStep('form')} style={st.secondaryBtn}>
+            <Text style={st.secondaryBtnText}>Submit Another Request</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  /* ---------------- Form ---------------- */
+  return (
+    <View style={st.container}>
+      <View style={st.header}>
+        <View style={st.headerRow}>
+          <Pressable onPress={() => setStep('dashboard')} style={st.iconBtn}>
+            <ArrowLeft size={18} color="#374151" />
+          </Pressable>
+          <Text style={st.title}>Book Consultation</Text>
+          <View style={{ width: 28 }} />
+        </View>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Intro block */}
+        <View style={st.introCard}>
+          <Text style={st.introTitle}>Tell us about your health concern</Text>
+          <Text style={st.introSub}>
+            Share details about what you're looking for, and we'll assign you the best consultant.
+          </Text>
+        </View>
+
+        {/* Concerns grid */}
+        <Text style={st.fieldLabel}>
+          What would you like help with?<Text style={{ color: '#db2777' }}>*</Text>
+        </Text>
+        <View style={st.concernGrid}>
+          {healthConcerns.map((c) => {
+            const Active = selectedConcerns.includes(c.id);
+            const Icon = c.icon;
             return (
               <Pressable
-                key={service.id}
-                onPress={() => goToConsultation(service)}
-                style={s.card}
+                key={c.id}
+                onPress={() => toggleConcern(c.id)}
+                style={[st.concernCard, Active ? st.concernCardActive : st.concernCardIdle]}
               >
-                {/* Image + overlay */}
-                <View style={{ height: 160 }}>
-                  <Image source={{ uri: service.image }} style={s.cardImg} />
-                  <LinearGradient
-                    colors={['rgba(0,0,0,0.6)', 'transparent']}
-                    start={{ x: 0.5, y: 1 }}
-                    end={{ x: 0.5, y: 0 }}
-                    style={s.cardImgOverlay}
-                  />
-                  {/* Tag */}
-                  <View style={s.tagChip}>
-                    <Text style={s.tagText}>{service.tag}</Text>
-                  </View>
-                  {/* Favorite */}
-                  <Pressable
-                    onPress={() => toggleFavorite(service.id)}
-                    style={s.favBtn}
-                  >
-                    <Heart
-                      size={16}
-                      color={isFavorite ? '#ec4899' : '#374151'}
-                      fill={isFavorite ? '#ec4899' : 'transparent'}
-                    />
-                  </Pressable>
-                  {/* Title */}
-                  <View style={s.cardTitleWrap}>
-                    <Text style={s.cardTitle} numberOfLines={2}>
-                      {service.name}
-                    </Text>
-                  </View>
+                <View style={[st.concernIconWrap, Active ? st.concernIconActive : st.concernIconIdle]}>
+                  <Icon size={22} color={Active ? '#db2777' : '#6b7280'} />
                 </View>
-
-                {/* Body */}
-                <View style={{ padding: 14 }}>
-                  {/* Provider */}
-                  <View style={[s.row, { marginBottom: 10 }]}>
-                    <Image source={{ uri: service.providerImage }} style={s.avatar} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.provider}>{service.provider}</Text>
-                      <View style={[s.row, { columnGap: 4 }]}>
-                        <Star size={12} color="#facc15" fill="#facc15" />
-                        <Text style={s.ratingText}>{service.rating}</Text>
-                        <Text style={s.ratingCount}>({service.reviews})</Text>
-                      </View>
-                    </View>
+                <Text style={[st.concernLabel, Active ? { color: '#9d174d' } : null]}>{c.label}</Text>
+                {Active && (
+                  <View style={st.tick}>
+                    <Check size={14} color="#fff" />
                   </View>
-
-                  {/* Info row */}
-                  <View style={[s.row, { columnGap: 12, marginBottom: 10 }]}>
-                    <View style={[s.row, { columnGap: 6 }]}>
-                      <Clock size={14} color="#4b5563" />
-                      <Text style={s.infoText}>{service.duration}</Text>
-                    </View>
-                    {service.available ? (
-                      <View style={s.availablePill}>
-                        <Text style={s.availableText}>Available</Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  {/* Price + Book */}
-                  <View style={s.rowBetween}>
-                    <View>
-                      <View style={[s.row, { columnGap: 8 }]}>
-                        <Text style={s.price}>₹{service.price}</Text>
-                        {service.originalPrice ? (
-                          <Text style={s.priceStrike}>₹{service.originalPrice}</Text>
-                        ) : null}
-                      </View>
-                      {service.originalPrice ? (
-                        <Text style={s.saveText}>Save ₹{saved}</Text>
-                      ) : null}
-                    </View>
-
-                    <Pressable onPress={() => goToConsultation(service)} style={s.bookBtn}>
-                      <LinearGradient
-                        colors={['#ec4899', '#8b5cf6']}
-                        start={{ x: 0, y: 0.5 }}
-                        end={{ x: 1, y: 0.5 }}
-                        style={s.bookBtnGradient}
-                      >
-                        <Text style={s.bookText}>Book</Text>
-                        <ChevronRight size={16} color="#fff" />
-                      </LinearGradient>
-                    </Pressable>
-                  </View>
-                </View>
+                )}
               </Pressable>
             );
           })}
         </View>
+
+        {/* Description */}
+        <Text style={[st.fieldLabel, { marginTop: 12 }]}>
+          Describe your concern<Text style={{ color: '#db2777' }}>*</Text>
+        </Text>
+        <View style={st.textarea}>
+          <TextInput
+            multiline
+            value={problemDescription}
+            onChangeText={setProblemDescription}
+            placeholder="Please provide details about your health concern, symptoms, duration, or goals…"
+            placeholderTextColor="#9ca3af"
+            style={st.textareaInput}
+          />
+        </View>
+        <Text style={st.counter}>{problemDescription.length} characters</Text>
+
+        {/* Upload */}
+        <Text style={[st.fieldLabel, { marginTop: 8 }]}>
+          Upload Medical Reports <Text style={st.optional}>(Optional)</Text>
+        </Text>
+        <View style={st.uploader}>
+          <View style={st.uploadIcon}>
+            <Upload size={26} color="#db2777" />
+          </View>
+          <Text style={st.uploadTitle}>Upload Files</Text>
+          <Text style={st.uploadSub}>PDF, JPG, PNG up to 10MB</Text>
+          <Pressable onPress={() => setHasUploadedFile(true)} style={st.chooseBtn}>
+            <Text style={st.chooseBtnText}>Choose File</Text>
+          </Pressable>
+          {hasUploadedFile ? <Text style={st.fileOk}>medical_report.pdf ✓</Text> : null}
+        </View>
+
+        {/* Previous consultant choice */}
+        <View style={st.prevBox}>
+          <User size={18} color="#2563eb" />
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <Text style={st.prevBoxTitle}>Previous Consultant</Text>
+            <Text style={st.prevBoxSub}>
+              You previously consulted with Dr. Anjali Mehta. Continue with the same consultant?
+            </Text>
+            <View style={{ flexDirection: 'row', columnGap: 8, marginTop: 8 }}>
+              <Pressable onPress={() => go('consultation')} style={st.blueBtn}>
+                <Text style={st.blueBtnText}>Yes</Text>
+              </Pressable>
+              <Pressable onPress={submitForm} style={st.lightBtn}>
+                <Text style={st.lightBtnText}>Assign New</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        {/* Submit */}
+        <Pressable
+          disabled={selectedConcerns.length === 0 || !problemDescription.trim()}
+          onPress={submitForm}
+          style={[
+            st.primaryBtn,
+            (selectedConcerns.length === 0 || !problemDescription.trim()) && { opacity: 0.5 },
+          ]}
+        >
+          <Text style={st.primaryBtnText}>Submit & Get Assigned</Text>
+        </Pressable>
+        {(selectedConcerns.length === 0 || !problemDescription.trim()) && (
+          <Text style={st.helper}>
+            Please select at least one concern and provide a description
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
 }
 
-const CARD_RADIUS = 18;
-
-const s = StyleSheet.create({
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
 
-  // Header
-  header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', padding: 16, paddingBottom: 10 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  /* Header */
+  header: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingHorizontal: 16, paddingVertical: 12 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconBtn: { padding: 8, borderRadius: 9999 },
   title: { fontSize: 16, fontWeight: '700', color: '#111827' },
 
-  // Search
-  searchIcon: { position: 'absolute', left: 12, top: 12 },
-  searchInput: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingLeft: 40,
-    paddingRight: 12,
-    fontSize: 14,
-    color: '#111827',
-  },
+  /* Dashboard */
+  hero: { borderRadius: 20, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  heroIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  heroTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 6 },
+  heroSub: { color: 'rgba(255,255,255,0.95)', fontSize: 13 },
+  heroCtaWrap: { marginTop: 14 },
+  heroCtaShadow: { borderRadius: 14, backgroundColor: '#fff', paddingVertical: 10, paddingHorizontal: 16, alignSelf: 'flex-start' },
+  heroCta: { color: '#db2777', fontWeight: '800', fontSize: 13 },
 
-  // Categories
-  catRow: { flexDirection: 'row', columnGap: 8, paddingRight: 8 },
-  catChip: { flexDirection: 'row', alignItems: 'center', columnGap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 9999 },
-  catChipActive: { backgroundColor: '#db2777' },
-  catChipInactive: { backgroundColor: '#f3f4f6' },
-  catTextActive: { color: '#fff', fontWeight: '700' },
-  catTextInactive: { color: '#374151', fontWeight: '600' },
+  sectionTitle: { fontWeight: '700', color: '#111827', fontSize: 14, marginVertical: 8 },
 
-  // Card
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: CARD_RADIUS,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  cardImg: { width: '100%', height: '100%', position: 'absolute', inset: 0 },
-  cardImgOverlay: { position: 'absolute', inset: 0 },
-  tagChip: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 9999,
-  },
-  tagText: { fontSize: 12, fontWeight: '800', color: '#111827' },
-  favBtn: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitleWrap: { position: 'absolute', left: 12, right: 12, bottom: 10 },
-  cardTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  benefitCard: { flexDirection: 'row', columnGap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#f3f4f6' },
+  benefitIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  benefitTitle: { fontWeight: '700', color: '#111827' },
+  benefitSub: { color: '#6b7280', fontSize: 12, marginTop: 2 },
 
-  // Provider & info
-  row: { flexDirection: 'row', alignItems: 'center' },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  avatar: { width: 32, height: 32, borderRadius: 16, marginRight: 8, backgroundColor: '#f3f4f6' },
-  provider: { color: '#111827', fontWeight: '600', fontSize: 13 },
-  ratingText: { fontSize: 12, color: '#4b5563' },
-  ratingCount: { fontSize: 12, color: '#9ca3af' },
-  infoText: { fontSize: 13, color: '#4b5563' },
-  availablePill: { backgroundColor: '#ecfdf5', borderRadius: 9999, paddingHorizontal: 8, paddingVertical: 4 },
-  availableText: { color: '#059669', fontSize: 12, fontWeight: '600' },
+  prevCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: '#f3f4f6' },
+  prevTitle: { fontWeight: '700', color: '#111827' },
+  prevSub: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  prevBadge: { backgroundColor: '#ecfdf5', color: '#059669', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9999, fontWeight: '700', fontSize: 12 },
 
-  // Price & book
-  price: { color: '#db2777', fontWeight: '800', fontSize: 18 },
-  priceStrike: { color: '#9ca3af', fontSize: 13, textDecorationLine: 'line-through' },
-  saveText: { color: '#059669', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  problemWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  problemPill: { backgroundColor: '#f3f4f6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 9999 },
+  problemText: { color: '#374151', fontSize: 12, fontWeight: '600' },
 
-  bookBtn: { borderRadius: 12, overflow: 'hidden' },
-  bookBtnGradient: { flexDirection: 'row', alignItems: 'center', columnGap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
-  bookText: { color: '#fff', fontWeight: '800' },
+  /* Shared buttons */
+  primaryBtn: { borderRadius: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
+  primaryBtnText: { color: '#fff', fontWeight: '800' },
+  secondaryBtn: { borderWidth: 2, borderColor: '#e5e7eb', borderRadius: 16, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginTop: 10, backgroundColor: '#fff' },
+  secondaryBtnText: { color: '#374151', fontWeight: '600' },
+
+  /* Form */
+  introCard: { backgroundColor: '#fff', borderRadius: 16, padding: 12, borderWidth: 2, borderColor: '#fde2e7' },
+  introTitle: { fontWeight: '700', color: '#111827', marginBottom: 4 },
+  introSub: { color: '#6b7280', fontSize: 13 },
+
+  fieldLabel: { fontWeight: '700', color: '#111827', marginTop: 10, marginBottom: 8 },
+  concernGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  concernCard: { width: '48%', borderRadius: 16, padding: 14, borderWidth: 2 },
+  concernCardIdle: { backgroundColor: '#fff', borderColor: '#e5e7eb' },
+  concernCardActive: { backgroundColor: '#fff5f7', borderColor: '#fb7185' },
+  concernIconWrap: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  concernIconIdle: { backgroundColor: '#f3f4f6' },
+  concernIconActive: { backgroundColor: '#ffe4e6' },
+  concernLabel: { fontWeight: '700', color: '#111827', fontSize: 13 },
+  tick: { position: 'absolute', right: 10, bottom: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: '#db2777', alignItems: 'center', justifyContent: 'center' },
+
+  textarea: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 2, borderColor: '#e5e7eb' },
+  textareaInput: { minHeight: 120, padding: 12, fontSize: 14, color: '#111827', textAlignVertical: 'top' },
+  counter: { color: '#9ca3af', fontSize: 12, marginTop: 6 },
+
+  optional: { color: '#9ca3af' },
+  uploader: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 2, borderColor: '#e5e7eb', alignItems: 'center', paddingVertical: 16 },
+  uploadIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#fff0f4', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  uploadTitle: { fontWeight: '700', color: '#111827' },
+  uploadSub: { color: '#9ca3af', fontSize: 12, marginTop: 2 },
+  chooseBtn: { marginTop: 10, backgroundColor: '#db2777', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+  chooseBtnText: { color: '#fff', fontWeight: '700' },
+  fileOk: { color: '#16a34a', fontWeight: '600', marginTop: 8, fontSize: 12 },
+
+  prevBox: { flexDirection: 'row', backgroundColor: '#eff6ff', borderRadius: 16, padding: 12, borderWidth: 2, borderColor: '#dbeafe', marginTop: 12 },
+  prevBoxTitle: { fontWeight: '700', color: '#111827' },
+  prevBoxSub: { color: '#6b7280', fontSize: 13, marginTop: 2 },
+  blueBtn: { backgroundColor: '#2563eb', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  blueBtnText: { color: '#fff', fontWeight: '700' },
+  lightBtn: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#e5e7eb', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  lightBtnText: { color: '#374151', fontWeight: '600' },
+
+  helper: { color: '#9ca3af', fontSize: 12, textAlign: 'center', marginTop: 6 },
+
+  /* Submitted */
+  successIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 8 },
+  successTitle: { fontWeight: '800', color: '#111827', fontSize: 18, textAlign: 'center', marginTop: 10 },
+  successSub: { color: '#6b7280', fontSize: 13, textAlign: 'center', marginTop: 4, marginBottom: 12 },
+
+  assignedCard: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 2, borderColor: '#ffe4e6', padding: 14 },
+  docImg: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#f3f4f6' },
+  docName: { fontWeight: '800', color: '#111827' },
+  docRole: { color: '#6b7280', fontSize: 12, marginBottom: 4 },
+  docRating: { color: '#4b5563', fontSize: 12 },
+  docExp: { color: '#9ca3af', fontSize: 12, marginTop: 2 },
+
+  nextAvail: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', borderRadius: 12, padding: 10, marginTop: 12 },
+  nextAvailLbl: { color: '#6b7280', fontSize: 12 },
+  nextAvailVal: { color: '#111827', fontWeight: '700', marginTop: 2 },
+
+  expertLbl: { color: '#6b7280', fontSize: 12, marginTop: 12 },
+  expertRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  tag: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9999, backgroundColor: '#fff0f4', borderWidth: 1, borderColor: '#ffe4e6' },
+  tagText: { color: '#db2777', fontWeight: '700', fontSize: 12 },
+
+  summaryCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginTop: 12 },
+  summaryTitle: { fontWeight: '800', color: '#111827', marginBottom: 8 },
+  concernChip: { flexDirection: 'row', alignItems: 'center', columnGap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: '#f3f4f6' },
+  concernChipText: { color: '#374151', fontSize: 12 },
+  summaryNoteLbl: { color: '#6b7280', fontSize: 12, marginTop: 10 },
+  summaryNote: { color: '#374151', backgroundColor: '#f9fafb', borderRadius: 12, padding: 10, marginTop: 6, fontSize: 13 },
+
+  /* Reuse */
+  doc: { fontSize: 12 },
 });
-
-
-
-
-// import React from 'react';
-// import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-// import ServicesList from '../../components/ServicesList';
-// import { services } from '../../data/homeeData';
-// import { useNavigation } from '@react-navigation/native';
-// import type { NavigationProp } from '@react-navigation/native';
-// import type { MainTabParamList } from '../../navigation/MainNavigator';
-// import { ArrowLeft } from 'lucide-react-native';
-
-// export default function ServicesScreen() {
-//   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
-
-//   return (
-//     <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
-//       <View style={styles.header}>
-//         <Text style={styles.title}>Services</Text>
-//       </View>
-//       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
-//         <ServicesList
-//           services={services}
-//           onPressService={(id) => {
-//             // For consultation screen unified route
-//             if (id === 'consultation') navigation.navigate('Services'); // or navigate to a stack: navigation.navigate('Consultation')
-//             // If you have per-service routes, adjust here as needed:
-//             // navigation.navigate('Consultation', { serviceId: id })
-//           }}
-//         />
-//       </ScrollView>
-//     </View>
-//   );
-// }
-// const styles = StyleSheet.create({
-//   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-//   title: { fontSize: 16, fontWeight: '700', color: '#111827' },
-// });

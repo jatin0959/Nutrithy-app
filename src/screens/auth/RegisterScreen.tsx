@@ -1,25 +1,34 @@
 // src/screens/auth/RegisterScreen.tsx
-import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  View, Text, TextInput, Pressable, StyleSheet, Platform, Image,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Eye, EyeOff, Check } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { User, Mail, Phone, Lock, Eye, EyeOff } from 'lucide-react-native';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState(''); // optional
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [show1, setShow1] = useState(false);
   const [show2, setShow2] = useState(false);
   const [err, setErr] = useState('');
 
-  const valid = email && pass.length >= 6 && pass === confirm;
+  // Phone is optional; button turns active when required fields are valid
+  const valid = useMemo(
+    () => !!name && !!email && pass.length >= 6 && pass === confirm,
+    [name, email, pass, confirm]
+  );
 
   const handleRegister = () => {
     setErr('');
+    if (!name) return setErr('Please enter your full name.');
     if (!email) return setErr('Please enter an email.');
     if (pass.length < 6) return setErr('Password must be at least 6 characters.');
     if (pass !== confirm) return setErr('Passwords do not match.');
@@ -29,72 +38,126 @@ export default function RegisterScreen({ navigation }: Props) {
 
   return (
     <View style={s.container}>
-      <LinearGradient colors={['#0ea5e9', '#8b5cf6']} style={s.header}>
-        <Text style={s.headerTitle}>Create Account</Text>
-        <Text style={s.headerSub}>Start your wellness journey</Text>
+      {/* Gradient Header */}
+      <LinearGradient colors={['#ff5bbd', '#8b5cf6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.header}>
+        <View style={s.logoWrap}>
+          <View style={s.logoTile}>
+            <Image
+              source={require('../../assets/images/logo.png')}
+              style={{ width: 42, height: 42, resizeMode: 'contain' }}
+            />
+          </View>
+        </View>
+        <Text style={s.h1}>Create Account</Text>
+        <Text style={s.sub}>Start your wellness journey today</Text>
       </LinearGradient>
 
-      <View style={s.form}>
-        <View style={s.group}>
-          <Text style={s.label}>Email</Text>
+      {/* Card */}
+      <View style={s.card}>
+        {/* Full Name */}
+        <Text style={s.label}>Full Name</Text>
+        <View style={s.inputWrap}>
+          <User size={18} color="#9aa4b2" />
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter your full name"
+            placeholderTextColor="#a8b0bb"
+            style={s.input}
+          />
+        </View>
+
+        {/* Email */}
+        <Text style={[s.label, { marginTop: 12 }]}>Email Address</Text>
+        <View style={s.inputWrap}>
+          <Mail size={18} color="#9aa4b2" />
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor="#9ca3af"
+            placeholder="your.email@example.com"
+            placeholderTextColor="#a8b0bb"
             autoCapitalize="none"
             keyboardType="email-address"
             style={s.input}
           />
         </View>
 
-        <View style={s.group}>
-          <Text style={s.label}>Password</Text>
-          <View style={{ position: 'relative' }}>
-            <TextInput
-              value={pass}
-              onChangeText={setPass}
-              placeholder="••••••••"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry={!show1}
-              style={[s.input, { paddingRight: 48 }]}
-            />
-            <Pressable style={s.eyeBtn} onPress={() => setShow1(v => !v)}>
-              {show1 ? <EyeOff size={20} color="#6b7280" /> : <Eye size={20} color="#6b7280" />}
-            </Pressable>
-          </View>
+        {/* Phone (Optional) */}
+        <View style={s.rowBetween}>
+          <Text style={[s.label, { marginTop: 12 }]}>Phone Number</Text>
+          <Text style={s.optional}>(Optional)</Text>
+        </View>
+        <View style={s.inputWrap}>
+          <Phone size={18} color="#9aa4b2" />
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="+1 (555) 000-0000"
+            placeholderTextColor="#a8b0bb"
+            keyboardType="phone-pad"
+            style={s.input}
+          />
         </View>
 
-        <View style={s.group}>
-          <Text style={s.label}>Confirm Password</Text>
-          <View style={{ position: 'relative' }}>
-            <TextInput
-              value={confirm}
-              onChangeText={setConfirm}
-              placeholder="••••••••"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry={!show2}
-              style={[s.input, { paddingRight: 48 }]}
-            />
-            <Pressable style={s.eyeBtn} onPress={() => setShow2(v => !v)}>
-              {show2 ? <EyeOff size={20} color="#6b7280" /> : <Eye size={20} color="#6b7280" />}
-            </Pressable>
-          </View>
+        {/* Password */}
+        <Text style={[s.label, { marginTop: 12 }]}>Password</Text>
+        <View style={s.inputWrap}>
+          <Lock size={18} color="#9aa4b2" />
+          <TextInput
+            value={pass}
+            onChangeText={setPass}
+            placeholder="Create a strong password"
+            placeholderTextColor="#a8b0bb"
+            secureTextEntry={!show1}
+            style={s.input}
+          />
+          <Pressable onPress={() => setShow1(v => !v)} hitSlop={12}>
+            {show1 ? <EyeOff size={18} color="#9aa4b2" /> : <Eye size={18} color="#9aa4b2" />}
+          </Pressable>
+        </View>
+
+        {/* Confirm Password */}
+        <Text style={[s.label, { marginTop: 12 }]}>Confirm Password</Text>
+        <View style={s.inputWrap}>
+          <Lock size={18} color="#9aa4b2" />
+          <TextInput
+            value={confirm}
+            onChangeText={setConfirm}
+            placeholder="Re-enter your password"
+            placeholderTextColor="#a8b0bb"
+            secureTextEntry={!show2}
+            style={s.input}
+          />
+          <Pressable onPress={() => setShow2(v => !v)} hitSlop={12}>
+            {show2 ? <EyeOff size={18} color="#9aa4b2" /> : <Eye size={18} color="#9aa4b2" />}
+          </Pressable>
         </View>
 
         {!!err && <Text style={s.err}>{err}</Text>}
 
-        <Pressable onPress={handleRegister} disabled={!valid} style={[s.cta, !valid && { opacity: 0.6 }]}>
-          <LinearGradient colors={['#ec4899', '#8b5cf6']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={s.ctaGrad}>
-            <Check size={18} color="#fff" />
-            <Text style={s.ctaText}>Create Account</Text>
-          </LinearGradient>
+        {/* Create Account CTA */}
+        <Pressable onPress={handleRegister} disabled={!valid} style={{ marginTop: 14 }}>
+          {valid ? (
+            <LinearGradient
+              colors={['#ff5bbd', '#8b5cf6']}   // same as Login screen
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={s.ctaGrad}
+            >
+              <Text style={s.ctaText}>Create Account</Text>
+            </LinearGradient>
+          ) : (
+            <View style={[s.ctaDisabled, s.shadowBtn]}>
+              <Text style={[s.ctaText, { color: '#9aa4b2' }]}>Create Account</Text>
+            </View>
+          )}
         </Pressable>
 
-        <View style={s.rowCenter}>
-          <Text style={s.help}>Already have an account?</Text>
+        {/* Switch to Login */}
+        <View style={s.switchRow}>
+          <Text style={s.switchText}>Already have an account?</Text>
           <Pressable onPress={() => navigation.replace('Login')}>
-            <Text style={s.link}> Sign in</Text>
+            <Text style={s.switchLink}> Sign in</Text>
           </Pressable>
         </View>
       </View>
@@ -102,21 +165,60 @@ export default function RegisterScreen({ navigation }: Props) {
   );
 }
 
+const CARD_RADIUS = 18;
+
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { paddingTop: 72, paddingBottom: 32, paddingHorizontal: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
-  headerTitle: { color: '#fff', fontSize: 24, fontWeight: '800' },
-  headerSub: { color: 'rgba(255,255,255,0.85)', marginTop: 4 },
-  form: { padding: 20 },
-  group: { marginBottom: 14 },
-  label: { color: '#111827', fontWeight: '700', marginBottom: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#e5e7eb', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, color: '#111827' },
-  eyeBtn: { position: 'absolute', right: 12, top: 10, padding: 6, borderRadius: 9999 },
-  err: { color: '#b91c1c', marginBottom: 8, fontWeight: '600' },
-  cta: { marginTop: 6 },
-  ctaGrad: { borderRadius: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', columnGap: 8 },
-  ctaText: { color: '#fff', fontWeight: '800' },
-  rowCenter: { flexDirection: 'row', justifyContent: 'center', marginTop: 16 },
-  help: { color: '#6b7280' },
-  link: { color: '#8b5cf6', fontWeight: '700' },
+  container: { flex: 1, backgroundColor: '#f6f7fb' },
+
+  header: {
+    paddingTop: Platform.select({ ios: 72, android: 56 }),
+    paddingBottom: 28,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  logoWrap: { alignItems: 'center', marginBottom: 10 },
+  logoTile: {
+    width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3,
+  },
+  h1: { textAlign: 'center', color: '#fff', fontSize: 22, fontWeight: '800' },
+  sub: { textAlign: 'center', color: 'rgba(255,255,255,0.9)', marginTop: 4, fontWeight: '600' },
+
+  card: {
+    marginTop: -24, backgroundColor: '#fff', marginHorizontal: 16,
+    borderRadius: CARD_RADIUS, padding: 16,
+    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+  },
+
+  label: { color: '#1f2937', fontWeight: '700', marginBottom: 8 },
+  optional: { color: '#9aa4b2', fontWeight: '600', marginBottom: 8 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center', columnGap: 10,
+    backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e5e7eb',
+    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10,
+  },
+  input: { flex: 1, color: '#111827', paddingVertical: 2 },
+
+  err: { color: '#b91c1c', fontWeight: '700', marginTop: 8 },
+
+  ctaGrad: {
+    borderRadius: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 10 }, elevation: 5,
+  },
+  ctaDisabled: {
+    borderRadius: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#eef1f6',
+  },
+  ctaText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  shadowBtn: {
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+  },
+
+  switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 14 },
+  switchText: { color: '#6b7280', fontWeight: '600' },
+  switchLink: { color: '#8b5cf6', fontWeight: '800' },
 });

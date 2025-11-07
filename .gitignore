@@ -1,0 +1,92 @@
+# --- OS / Editor junk ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# VS Code (keep shared settings if you want)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# --- Node / Package managers ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp.*
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+
+# --- Env files (commit only example) ---
+.env*
+!.env.example
+
+# --- Expo / EAS ---
+.expo/
+.expo-shared/
+.expo-web/
+dist/
+web-build/
+.easlxc/
+.eas/
+# (keep eas.json – it's config)
+!eas.json
+
+# --- Metro / Cache ---
+.cache/
+metro-cache/
+**/.metro-cache/
+
+# --- Testing ---
+coverage/
+jest-cache/
+jest-results.json
+
+# --- Logs / Temp ---
+*.log
+logs/
+tmp/
+temp/
+
+# --- Android (bare / prebuild) ---
+android/.gradle/
+android/.idea/
+android/local.properties
+android/**/build/
+android/build/
+android/*.iml
+*.iml
+# Keystores (never commit)
+*.keystore
+*.jks
+android/app/debug.keystore
+
+# Packaged JS bundles (generated)
+android/app/src/main/assets/index.android.bundle
+android/app/src/main/assets/index.android.bundle.map
+
+# --- iOS (bare / prebuild) ---
+ios/build/
+ios/DerivedData/
+ios/Pods/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/xcshareddata/WorkspaceSettings.xcsettings
+*.xcuserdatad
+*.xccheckout
+*.xcscmblueprint
+
+# --- Fastlane (if used) ---
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# --- Sentry / Misc ---
+.sentryclirc
