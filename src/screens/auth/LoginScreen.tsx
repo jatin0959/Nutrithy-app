@@ -7,19 +7,13 @@ import {
   Pressable,
   StyleSheet,
   Platform,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { NavigationProp } from '@react-navigation/native';
-import {
-  Shield,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Dot,
-} from 'lucide-react-native';
-import { Image } from "react-native";
+import { NavigationProp, CommonActions } from '@react-navigation/native';
+import { Mail, Lock, Eye, EyeOff, Dot } from 'lucide-react-native';
+
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 
@@ -31,26 +25,42 @@ export default function LoginScreen({ navigation }: Props) {
   const [show, setShow] = useState(false);
   const [err, setErr] = useState('');
 
+  /** Navigate to Main (Root → App) after successful login */
   const goToMain = () => {
     navigation
-      .getParent<NavigationProp<RootStackParamList>>() // parent = Root stack
-      ?.reset({ index: 0, routes: [{ name: 'Main' }] });
+      .getParent<NavigationProp<RootStackParamList>>() // Parent is Root Stack
+      ?.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Main' }], // "App" wraps MainNavigator
+        })
+      );
   };
 
-  const handleLogin = () => {
-    setErr('');
-    if (!email || !pass) {
-      setErr('Please enter email and password.');
-      return;
-    }
-    // TODO: call your auth API; on success:
-    goToMain();
-  };
+const handleLogin = () => {
+  setErr('');
+
+  // Simple validation
+  if (!email || !pass) {
+    setErr('Please enter email and password.');
+    return;
+  }
+
+  // Dummy credentials
+  const dummyEmail = 'user@nutrithywellness.com';
+  const dummyPass = 'Jatin@2004';
+
+  if (email.toLowerCase() === dummyEmail && pass === dummyPass) {
+    goToMain(); // success → main app
+  } else {
+    setErr('Invalid email or password. Try test@example.com / 123456');
+  }
+};
+
 
   return (
     <View style={s.container}>
-
-      {/* Gradient Header */}
+      {/* Header */}
       <LinearGradient
         colors={['#ff5bbd', '#8b5cf6']}
         start={{ x: 0, y: 0 }}
@@ -60,8 +70,8 @@ export default function LoginScreen({ navigation }: Props) {
         <View style={s.logoWrap}>
           <View style={s.logoTile}>
             <Image
-              source={require("../../assets/images/logo.png")}
-              style={{ width: 32, height: 32, resizeMode: "contain" }}
+              source={require('../../assets/images/logo.png')}
+              style={{ width: 32, height: 32, resizeMode: 'contain' }}
             />
           </View>
         </View>
@@ -69,9 +79,8 @@ export default function LoginScreen({ navigation }: Props) {
         <Text style={s.sub}>Continue your wellness journey</Text>
       </LinearGradient>
 
-      {/* Card */}
+      {/* Login Card */}
       <View style={s.card}>
-        {/* Email */}
         <Text style={s.label}>Email Address</Text>
         <View style={s.inputWrap}>
           <Mail size={18} color="#9aa4b2" />
@@ -86,7 +95,6 @@ export default function LoginScreen({ navigation }: Props) {
           />
         </View>
 
-        {/* Password */}
         <Text style={[s.label, { marginTop: 12 }]}>Password</Text>
         <View style={s.inputWrap}>
           <Lock size={18} color="#9aa4b2" />
@@ -103,7 +111,7 @@ export default function LoginScreen({ navigation }: Props) {
           </Pressable>
         </View>
 
-        <Pressable onPress={() => {/* TODO: forgot flow */ }} style={s.forgotBtn}>
+        <Pressable onPress={() => { /* TODO: Forgot Password flow */ }} style={s.forgotBtn}>
           <Text style={s.forgotText}>Forgot Password?</Text>
         </Pressable>
 
@@ -130,11 +138,11 @@ export default function LoginScreen({ navigation }: Props) {
 
         {/* Social Buttons */}
         <View style={s.socialRow}>
-          <Pressable onPress={() => { /* TODO */ }} style={[s.socialBtn, s.shadowLite]}>
+          <Pressable style={[s.socialBtn, s.shadowLite]}>
             <View style={s.socialDot}><Dot size={12} color="#0ea5e9" /></View>
             <Text style={s.socialText}>Google</Text>
           </Pressable>
-          <Pressable onPress={() => { /* TODO */ }} style={[s.socialBtn, s.shadowLite]}>
+          <Pressable style={[s.socialBtn, s.shadowLite]}>
             <View style={s.socialDot}><Dot size={12} color="#2563eb" /></View>
             <Text style={s.socialText}>Facebook</Text>
           </Pressable>
@@ -145,10 +153,12 @@ export default function LoginScreen({ navigation }: Props) {
       <View style={s.footer}>
         <Text style={s.footerText}>
           Don’t have an account?
-          <Text
-            style={s.footerLink}
-            onPress={() => navigation.navigate('Register')}
-          > Sign Up</Text>
+          {/* <Text style={s.footerLink} onPress={() => navigation.navigate('Register')}>
+            {' '}Sign Up
+          </Text> */}
+                    <Text style={s.footerLink} >
+            {' '}Sign Up
+          </Text>
         </Text>
 
         <Text style={s.terms} numberOfLines={2}>
@@ -164,7 +174,6 @@ const CARD_RADIUS = 18;
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f7fb' },
-
   header: {
     paddingTop: Platform.select({ ios: 72, android: 56 }),
     paddingBottom: 28,
@@ -174,9 +183,11 @@ const s = StyleSheet.create({
   },
   logoWrap: { alignItems: 'center', marginBottom: 10 },
   logoTile: {
-    width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3,
+    width: 56, height: 56, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#fff',
+    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 }, elevation: 3,
   },
   h1: { textAlign: 'center', color: '#fff', fontSize: 22, fontWeight: '800' },
   sub: { textAlign: 'center', color: 'rgba(255,255,255,0.9)', marginTop: 4, fontWeight: '600' },
@@ -196,73 +207,46 @@ const s = StyleSheet.create({
 
   label: { color: '#1f2937', fontWeight: '700', marginBottom: 8 },
   inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: 10,
-    backgroundColor: '#f8fafc',
-    borderWidth: 1.5,
-    borderColor: '#e5e7eb',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', columnGap: 10,
+    backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e5e7eb',
+    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10,
   },
   input: { flex: 1, color: '#111827', paddingVertical: 2 },
 
   forgotBtn: { alignSelf: 'flex-end', marginTop: 10 },
   forgotText: { color: '#ef4444', fontWeight: '700' },
-
   err: { color: '#b91c1c', fontWeight: '700', marginTop: 8 },
 
   loginGrad: {
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 5,
+    borderRadius: 16, paddingVertical: 14,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 }, elevation: 5,
   },
   loginText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 
   dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: 10,
-    marginTop: 14,
+    flexDirection: 'row', alignItems: 'center',
+    columnGap: 10, marginTop: 14,
   },
   divider: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
   or: { color: '#6b7280', fontWeight: '700' },
 
-  socialRow: {
-    flexDirection: 'row',
-    columnGap: 12,
-    marginTop: 12,
-  },
+  socialRow: { flexDirection: 'row', columnGap: 12, marginTop: 12 },
   socialBtn: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#e5e7eb',
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    columnGap: 8,
+    flex: 1, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 14,
+    paddingVertical: 12, alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', columnGap: 8,
   },
   socialDot: {
-    width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#eaf2ff',
+    width: 18, height: 18, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#eaf2ff',
   },
   socialText: { color: '#111827', fontWeight: '700' },
   shadowLite: {
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 }, elevation: 2,
   },
 
   footer: { alignItems: 'center', marginTop: 16, paddingHorizontal: 16 },

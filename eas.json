@@ -1,7 +1,18 @@
 {
+  "cli": { "version": ">= 13.0.0", "appVersionSource": "remote" },
   "build": {
-    "preview": {
-      "android": { "buildType": "apk" }
+    "preview": { "android": { "buildType": "apk" } },
+    "production": {
+      "android": {
+        "buildType": "app-bundle",
+        "image": "latest",              
+        "autoIncrement": "versionCode"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": { "serviceAccountKeyPath": "./play-service-account.json" }
     }
   }
 }

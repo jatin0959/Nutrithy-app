@@ -33,7 +33,7 @@ export default function RegisterScreen({ navigation }: Props) {
     if (pass.length < 6) return setErr('Password must be at least 6 characters.');
     if (pass !== confirm) return setErr('Passwords do not match.');
     // TODO: call signup API; on success:
-    navigation.replace('ProfileCreation', { email });
+    navigation.navigate('ProfileCreation', { email });
   };
 
   return (
@@ -156,7 +156,7 @@ export default function RegisterScreen({ navigation }: Props) {
         {/* Switch to Login */}
         <View style={s.switchRow}>
           <Text style={s.switchText}>Already have an account?</Text>
-          <Pressable onPress={() => navigation.replace('Login')}>
+          <Pressable onPress={() => navigation.navigate('Login')}>
             <Text style={s.switchLink}> Sign in</Text>
           </Pressable>
         </View>

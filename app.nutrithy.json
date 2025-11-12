@@ -3,7 +3,7 @@
     "name": "Nutrithy",
     "slug": "nutrithy-app",
     "scheme": "nutrithy",
-    "version": "1.0.1",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/images/logo.png",
     "splash": {
@@ -19,7 +19,6 @@
       "package": "com.nutrithy.app",
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
-      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/images/logo.png",
         "backgroundColor": "#0B132B"

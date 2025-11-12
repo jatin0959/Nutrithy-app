@@ -90,3 +90,5 @@ fastlane/test_output
 
 # --- Sentry / Misc ---
 .sentryclirc
+node_modules
+node_modules
