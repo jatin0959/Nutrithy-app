@@ -1,18 +1,39 @@
 {
   "cli": { "version": ">= 13.0.0", "appVersionSource": "remote" },
+
   "build": {
-    "preview": { "android": { "buildType": "apk" } },
+    "development": {
+      "android": { "developmentClient": true, "buildType": "apk", "image": "sdk-54" }
+    },
+    "preview": {
+      "android": { "buildType": "apk", "image": "sdk-54" }
+    },
     "production": {
-      "android": {
-        "buildType": "app-bundle",
-        "image": "latest",              
-        "autoIncrement": "versionCode"
-      }
+      "android": { "buildType": "app-bundle", "image": "sdk-54", "autoIncrement": "versionCode" }
     }
   },
+
   "submit": {
+    "internal": {
+      "android": {
+        "serviceAccountKeyPath": "./play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    },
+    "alpha": {
+      "android": {
+        "serviceAccountKeyPath": "./play-service-account.json",
+        "track": "alpha",
+        "releaseStatus": "draft"
+      }
+    },
     "production": {
-      "android": { "serviceAccountKeyPath": "./play-service-account.json" }
+      "android": {
+        "serviceAccountKeyPath": "./play-service-account.json",
+        "track": "production",
+        "releaseStatus": "draft"
+      }
     }
   }
 }

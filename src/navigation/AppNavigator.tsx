@@ -14,32 +14,37 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
-  const [authState, setAuthState] = useState<"checking" | "guest" | "authed">("guest");
+  const [authState, setAuthState] = useState<"checking" | "guest" | "authed">(
+    "checking"
+  );
 
   useEffect(() => {
     let alive = true;
     (async () => {
       // TODO: load token / session here
       if (!alive) return;
-      setAuthState("guest"); // or "authed" based on your check
+      // decide "guest" vs "authed"
+      setAuthState("guest");
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  if (authState === "checking") {
-    // Return a navigator (no container) with a single Splash screen
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Splash" component={AppSplashScreen} />
-      </Stack.Navigator>
-    );
-  }
+  const initialRoute =
+    authState === "checking"
+      ? "Splash"
+      : authState === "authed"
+      ? "Main"
+      : "Auth";
 
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false }}
-      initialRouteName={authState === "authed" ? "Main" : "Auth"}
+      initialRouteName={initialRoute}
     >
+      {/* keep ALL screens declared in this stack */}
+      {/* <Stack.Screen name="Splash" component={AppSplashScreen} /> */}
       <Stack.Screen name="Auth" component={AuthNavigator} />
       <Stack.Screen name="Main" component={MainNavigator} />
     </Stack.Navigator>

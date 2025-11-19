@@ -11,11 +11,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+
 import { NavigationProp, CommonActions } from '@react-navigation/native';
 import { Mail, Lock, Eye, EyeOff, Dot } from 'lucide-react-native';
 
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { useAuth } from '../../hooks/useAuth'; // ⬅️ API hook
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -25,37 +28,77 @@ export default function LoginScreen({ navigation }: Props) {
   const [show, setShow] = useState(false);
   const [err, setErr] = useState('');
 
+  const { login, loading } = useAuth(); // ⬅️ from hook
+
   /** Navigate to Main (Root → App) after successful login */
   const goToMain = () => {
-    navigation
-      .getParent<NavigationProp<RootStackParamList>>() // Parent is Root Stack
-      ?.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: 'Main' }], // "App" wraps MainNavigator
-        })
-      );
+    const parentNav = navigation.getParent<NavigationProp<RootStackParamList>>();
+
+    if (!parentNav) {
+      console.warn('[goToMain] No parent navigator found');
+      return;
+    }
+
+    parentNav.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Main' as keyof RootStackParamList }], // 👈 use "Main"
+      })
+    );
   };
 
-const handleLogin = () => {
-  setErr('');
+  const handleLogin = async () => {
+    setErr('');
 
-  // Simple validation
-  if (!email || !pass) {
-    setErr('Please enter email and password.');
-    return;
-  }
+    if (!email || !pass) {
+      setErr('Please enter email and password.');
+      return;
+    }
 
-  // Dummy credentials
-  const dummyEmail = 'user@nutrithywellness.com';
-  const dummyPass = 'Jatin@2004';
+    try {
+      const resp = await login(email, pass);
+      if (!resp) {
+        // useAuth already showed an error / alert
+        return;
+      }
 
-  if (email.toLowerCase() === dummyEmail && pass === dummyPass) {
-    goToMain(); // success → main app
-  } else {
-    setErr('Invalid email or password. Try test@example.com / 123456');
-  }
-};
+      console.log('[LOGIN_RESPONSE]', JSON.stringify(resp, null, 2));
+
+      const user =
+        (resp as any).user ??
+        (resp as any).data?.user ??
+        resp;
+
+      if (!user || !user.email) {
+        setErr('Unexpected response from server. No user object.');
+        return;
+      }
+
+      // 👇 Build and store full name
+      const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+      try {
+        await AsyncStorage.setItem('userName', fullName);
+        await AsyncStorage.setItem('userEmail', user.email);
+      } catch (e) {
+        console.warn('[STORE_USER_ERROR]', e);
+      }
+
+      const needsProfileSetup =
+        typeof user.needsProfileSetup === 'boolean'
+          ? user.needsProfileSetup
+          : user.wizardCompleted === false; // fallback
+
+      if (needsProfileSetup) {
+        navigation.navigate('ProfileCreation', { email: user.email });
+      } else {
+        goToMain();
+      }
+    } catch (e: any) {
+      console.log('[LOGIN_ERROR]', e?.response?.data || e?.message);
+      setErr('Login failed. Please try again.');
+    }
+  };
+
 
 
   return (
@@ -118,14 +161,20 @@ const handleLogin = () => {
         {!!err && <Text style={s.err}>{err}</Text>}
 
         {/* Login CTA */}
-        <Pressable onPress={handleLogin} style={{ marginTop: 6 }}>
+        <Pressable
+          onPress={loading ? undefined : handleLogin}
+          style={{ marginTop: 6 }}
+          disabled={loading}
+        >
           <LinearGradient
             colors={['#ff5bbd', '#8b5cf6']}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={s.loginGrad}
           >
-            <Text style={s.loginText}>Login</Text>
+            <Text style={s.loginText}>
+              {loading ? 'Logging in...' : 'Login'}
+            </Text>
           </LinearGradient>
         </Pressable>
 
@@ -153,10 +202,7 @@ const handleLogin = () => {
       <View style={s.footer}>
         <Text style={s.footerText}>
           Don’t have an account?
-          {/* <Text style={s.footerLink} onPress={() => navigation.navigate('Register')}>
-            {' '}Sign Up
-          </Text> */}
-                    <Text style={s.footerLink} >
+          <Text style={s.footerLink} onPress={() => navigation.navigate('Register')}>
             {' '}Sign Up
           </Text>
         </Text>
@@ -183,11 +229,17 @@ const s = StyleSheet.create({
   },
   logoWrap: { alignItems: 'center', marginBottom: 10 },
   logoTile: {
-    width: 56, height: 56, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#fff',
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 }, elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   h1: { textAlign: 'center', color: '#fff', fontSize: 22, fontWeight: '800' },
   sub: { textAlign: 'center', color: 'rgba(255,255,255,0.9)', marginTop: 4, fontWeight: '600' },
@@ -207,9 +259,15 @@ const s = StyleSheet.create({
 
   label: { color: '#1f2937', fontWeight: '700', marginBottom: 8 },
   inputWrap: {
-    flexDirection: 'row', alignItems: 'center', columnGap: 10,
-    backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e5e7eb',
-    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   input: { flex: 1, color: '#111827', paddingVertical: 2 },
 
@@ -218,40 +276,66 @@ const s = StyleSheet.create({
   err: { color: '#b91c1c', fontWeight: '700', marginTop: 8 },
 
   loginGrad: {
-    borderRadius: 16, paddingVertical: 14,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12,
-    shadowOffset: { width: 0, height: 10 }, elevation: 5,
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 5,
   },
   loginText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 
   dividerRow: {
-    flexDirection: 'row', alignItems: 'center',
-    columnGap: 10, marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 10,
+    marginTop: 14,
   },
   divider: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
   or: { color: '#6b7280', fontWeight: '700' },
 
   socialRow: { flexDirection: 'row', columnGap: 12, marginTop: 12 },
   socialBtn: {
-    flex: 1, backgroundColor: '#fff',
-    borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 14,
-    paddingVertical: 12, alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row', columnGap: 8,
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    columnGap: 8,
   },
   socialDot: {
-    width: 18, height: 18, borderRadius: 9,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#eaf2ff',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eaf2ff',
   },
   socialText: { color: '#111827', fontWeight: '700' },
   shadowLite: {
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 }, elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
 
   footer: { alignItems: 'center', marginTop: 16, paddingHorizontal: 16 },
   footerText: { color: '#475569', fontWeight: '600' },
   footerLink: { color: '#ef3d8a', fontWeight: '800' },
-  terms: { textAlign: 'center', color: '#94a3b8', marginTop: 8, fontSize: 12, lineHeight: 16 },
+  terms: {
+    textAlign: 'center',
+    color: '#94a3b8',
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 16,
+  },
   termsLink: { color: '#6b21a8', fontWeight: '800' },
 });

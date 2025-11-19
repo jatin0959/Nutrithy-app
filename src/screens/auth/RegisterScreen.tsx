@@ -1,12 +1,19 @@
 // src/screens/auth/RegisterScreen.tsx
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet, Platform, Image,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Platform,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { User, Mail, Phone, Lock, Eye, EyeOff } from 'lucide-react-native';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { useAuth } from '../../hooks/useAuth'; // ⬅️ NEW
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -14,32 +21,70 @@ export default function RegisterScreen({ navigation }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState(''); // optional
+  const [companyCode, setCompanyCode] = useState(''); // ⬅️ NEW
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [show1, setShow1] = useState(false);
   const [show2, setShow2] = useState(false);
   const [err, setErr] = useState('');
 
+  const { register, loading } = useAuth(); // ⬅️ uses API integration
+
   // Phone is optional; button turns active when required fields are valid
   const valid = useMemo(
-    () => !!name && !!email && pass.length >= 6 && pass === confirm,
-    [name, email, pass, confirm]
+    () =>
+      !!name &&
+      !!email &&
+      !!companyCode && // ⬅️ now required
+      pass.length >= 6 &&
+      pass === confirm,
+    [name, email, companyCode, pass, confirm]
   );
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     setErr('');
+
     if (!name) return setErr('Please enter your full name.');
     if (!email) return setErr('Please enter an email.');
+    if (!companyCode) return setErr('Please enter your company code.');
     if (pass.length < 6) return setErr('Password must be at least 6 characters.');
     if (pass !== confirm) return setErr('Passwords do not match.');
-    // TODO: call signup API; on success:
-    navigation.navigate('ProfileCreation', { email });
+
+    // Split full name into firstName + lastName for backend
+    const trimmed = name.trim();
+    const [firstName, ...rest] = trimmed.split(' ');
+    const lastName = rest.join(' ') || firstName; // fallback if single name
+
+    // 🔌 Call backend: POST /employee/auth/register
+    const resp = await register({
+      firstName,
+      lastName,
+      email,
+      password: pass,
+      companyCode,
+      // employeeId: optional – can be added later if you add an input
+    });
+
+    if (!resp) return; // error already handled in hook
+
+    // Backend sends needsProfileSetup = true/false
+    if (resp.user.needsProfileSetup) {
+      navigation.navigate('ProfileCreation', { email });
+    } else {
+      // If profile already complete, send to main app (adjust route as needed)
+      navigation.navigate('ProfileCreation', { email });
+    }
   };
 
   return (
     <View style={s.container}>
       {/* Gradient Header */}
-      <LinearGradient colors={['#ff5bbd', '#8b5cf6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.header}>
+      <LinearGradient
+        colors={['#ff5bbd', '#8b5cf6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.header}
+      >
         <View style={s.logoWrap}>
           <View style={s.logoTile}>
             <Image
@@ -78,6 +123,20 @@ export default function RegisterScreen({ navigation }: Props) {
             placeholderTextColor="#a8b0bb"
             autoCapitalize="none"
             keyboardType="email-address"
+            style={s.input}
+          />
+        </View>
+
+        {/* Company Code (NEW, required) */}
+        <Text style={[s.label, { marginTop: 12 }]}>Company Code</Text>
+        <View style={s.inputWrap}>
+          <User size={18} color="#9aa4b2" />
+          <TextInput
+            value={companyCode}
+            onChangeText={setCompanyCode}
+            placeholder="Enter company code"
+            placeholderTextColor="#a8b0bb"
+            autoCapitalize="none"
             style={s.input}
           />
         </View>
@@ -136,10 +195,14 @@ export default function RegisterScreen({ navigation }: Props) {
         {!!err && <Text style={s.err}>{err}</Text>}
 
         {/* Create Account CTA */}
-        <Pressable onPress={handleRegister} disabled={!valid} style={{ marginTop: 14 }}>
-          {valid ? (
+        <Pressable
+          onPress={handleRegister}
+          disabled={!valid || loading}
+          style={{ marginTop: 14 }}
+        >
+          {valid && !loading ? (
             <LinearGradient
-              colors={['#ff5bbd', '#8b5cf6']}   // same as Login screen
+              colors={['#ff5bbd', '#8b5cf6']} // same as Login screen
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               style={s.ctaGrad}
@@ -148,7 +211,9 @@ export default function RegisterScreen({ navigation }: Props) {
             </LinearGradient>
           ) : (
             <View style={[s.ctaDisabled, s.shadowBtn]}>
-              <Text style={[s.ctaText, { color: '#9aa4b2' }]}>Create Account</Text>
+              <Text style={[s.ctaText, { color: '#9aa4b2' }]}>
+                {loading ? 'Creating account...' : 'Create Account'}
+              </Text>
             </View>
           )}
         </Pressable>
@@ -179,43 +244,87 @@ const s = StyleSheet.create({
   },
   logoWrap: { alignItems: 'center', marginBottom: 10 },
   logoTile: {
-    width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#ffffff',
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   h1: { textAlign: 'center', color: '#fff', fontSize: 22, fontWeight: '800' },
-  sub: { textAlign: 'center', color: 'rgba(255,255,255,0.9)', marginTop: 4, fontWeight: '600' },
+  sub: {
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
+    fontWeight: '600',
+  },
 
   card: {
-    marginTop: -24, backgroundColor: '#fff', marginHorizontal: 16,
-    borderRadius: CARD_RADIUS, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    marginTop: -24,
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    borderRadius: CARD_RADIUS,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
 
   label: { color: '#1f2937', fontWeight: '700', marginBottom: 8 },
   optional: { color: '#9aa4b2', fontWeight: '600', marginBottom: 8 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
 
   inputWrap: {
-    flexDirection: 'row', alignItems: 'center', columnGap: 10,
-    backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e5e7eb',
-    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   input: { flex: 1, color: '#111827', paddingVertical: 2 },
 
   err: { color: '#b91c1c', fontWeight: '700', marginTop: 8 },
 
   ctaGrad: {
-    borderRadius: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 10 }, elevation: 5,
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 5,
   },
   ctaDisabled: {
-    borderRadius: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#eef1f6',
   },
   ctaText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   shadowBtn: {
-    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
 
   switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 14 },

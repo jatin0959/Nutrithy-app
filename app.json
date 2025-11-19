@@ -1,38 +1,55 @@
 {
   "expo": {
-    "name": "Nutrithy",
+    "name": "Nutrithy Wellness",
     "slug": "nutrithy-app",
-    "scheme": "nutrithy",
+    "scheme": "nutrithy-wellness",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./src/assets/images/logo.png",
+
     "splash": {
       "image": "./src/assets/images/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#0B132B"
     },
+
+    "jsEngine": "hermes",
+
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nutrithy.app"
+      "bundleIdentifier": "com.nutrithy.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Nutrithy to use your camera to capture progress photos.",
+        "NSPhotoLibraryUsageDescription": "Allow Nutrithy to access your photos for challenge submissions.",
+        "NSMicrophoneUsageDescription": "Allow Nutrithy to record sound with your videos."
+      }
     },
+
     "android": {
       "package": "com.nutrithy.app",
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "versionCode": 2,
+
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/images/logo.png",
         "backgroundColor": "#0B132B"
-      }
+      },
+
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
+      ]
     },
+
     "web": {
       "bundler": "metro"
     },
-    "plugins": [
-      "expo-font",
-      "expo-asset"
-    ],
+
     "extra": {
+      "googleFitAndroidClientId": "532636931964-s5esh367dooeikhso814u1teabh62eo9.apps.googleusercontent.com",
       "eas": {
         "projectId": "07c902a6-a1ea-402c-9c47-485bab11d345"
       }

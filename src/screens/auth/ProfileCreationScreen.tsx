@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Platform,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -32,19 +33,14 @@ import {
   Check,
   ChevronRight,
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import {
+  useNavigation,
+  NavigationProp,
+  CommonActions,
+} from '@react-navigation/native';
+
 import type { RootStackParamList } from '../../navigation/AppNavigator';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
-
-
-type Props = {
-  onComplete: () => void;
-  logoUri?: string;
-};
-
-type NavProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
-
+import { updateProfile } from '../../api/profile';
 
 type Profile = {
   name: string;
@@ -81,9 +77,11 @@ const interests = [
   { id: 'hiking', label: 'Hiking', icon: Mountain, color: ['#2dd4bf', '#22c55e'] },
 ];
 
-export default function ProfileCreationScreen({ onComplete, logoUri }: Props) {
-   const navigation = useNavigation<NavProp>();
+export default function ProfileCreationScreen() {
+  const navigation = useNavigation();
   const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [profile, setProfile] = useState<Profile>({
     name: '',
     age: '',
@@ -97,22 +95,22 @@ export default function ProfileCreationScreen({ onComplete, logoUri }: Props) {
     sleepHours: '',
   });
 
-    const handleSkip = () => {
-    // Navigate directly to your main/home tabs (same as login)
-    navigation.replace('Main');
+  // 👇 EXACT SAME PATTERN AS LoginScreen.goToMain
+  const goToMain = () => {
+    const rootNav = navigation.getParent<NavigationProp<RootStackParamList>>();
+    rootNav?.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      })
+    );
+  };
+
+  const handleSkip = () => {
+    goToMain();
   };
 
   const progressPct = (step / TOTAL_STEPS) * 100;
-
-  const handleNext = () => (step < TOTAL_STEPS ? setStep(step + 1) : onComplete());
-  const handleBack = () => step > 1 && setStep(step - 1);
-  // const handleSkip = () => onComplete();
-
-  const toggleSelection = (key: 'goals' | 'interests', value: string) => {
-    const arr = profile[key];
-    const next = arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
-    setProfile({ ...profile, [key]: next });
-  };
 
   const canProceed = useMemo(() => {
     switch (step) {
@@ -132,6 +130,58 @@ export default function ProfileCreationScreen({ onComplete, logoUri }: Props) {
     if (!kg || !m) return null;
     return (kg / (m * m)).toFixed(1);
   }, [profile.weight, profile.height]);
+
+  const toggleSelection = (key: 'goals' | 'interests', value: string) => {
+    const arr = profile[key];
+    const next = arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
+    setProfile({ ...profile, [key]: next });
+  };
+
+  const handleBack = () => step > 1 && !saving && setStep(step - 1);
+
+  const handleComplete = async () => {
+    try {
+      setSaving(true);
+      setSaveError('');
+
+      const payload = {
+        name: profile.name,
+        age: profile.age ? Number(profile.age) : undefined,
+        gender: profile.gender || undefined,
+        weight: profile.weight ? Number(profile.weight) : undefined,
+        height: profile.height ? Number(profile.height) : undefined,
+        goals: profile.goals,
+        interests: profile.interests,
+        dietPreference: profile.dietPreference || undefined,
+        activityLevel: profile.activityLevel || undefined,
+        sleepHours: profile.sleepHours || undefined,
+        wizardCompleted: true,
+      };
+
+      await updateProfile(payload);
+
+      // ✅ After successful save, go to Main (root stack)
+      goToMain();
+    } catch (error: any) {
+      console.log('[PROFILE_SAVE_ERROR]', error?.response?.data || error.message);
+      const msg =
+        error?.response?.data?.error?.message ||
+        error?.response?.data?.message ||
+        'Failed to save profile. Please try again.';
+      setSaveError(msg);
+      Alert.alert('Error', msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleNext = async () => {
+    if (step < TOTAL_STEPS) {
+      setStep(step + 1);
+    } else {
+      await handleComplete();
+    }
+  };
 
   /** Gradient primary button */
   const PrimaryCTA = ({ text }: { text: string }) => (
@@ -171,11 +221,10 @@ export default function ProfileCreationScreen({ onComplete, logoUri }: Props) {
             <Text style={styles.appTitle}>Create Profile</Text>
           </View>
 
-          <Pressable onPress={handleSkip}>
-            <Text style={styles.skip}>Skip</Text>
+          <Pressable onPress={handleSkip} disabled={saving}>
+            <Text style={[styles.skip, saving && { opacity: 0.5 }]}>Skip</Text>
           </Pressable>
         </View>
-
 
         {/* Progress */}
         <View style={styles.progressTrack}>
@@ -186,6 +235,7 @@ export default function ProfileCreationScreen({ onComplete, logoUri }: Props) {
             style={[styles.progressFill, { width: `${progressPct}%` }]}
           />
         </View>
+
 
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
           {/* STEP 1 */}
@@ -219,7 +269,7 @@ export default function ProfileCreationScreen({ onComplete, logoUri }: Props) {
 
               <Text style={[styles.label, { marginTop: 12 }]}>Gender</Text>
               <View style={styles.genderRow}>
-                {['Male', 'Female', 'Other'].map((g, idx) => {
+                {['Male', 'Female', 'Other'].map((g) => {
                   const active = profile.gender === g;
                   if (active) {
                     return (
@@ -431,20 +481,36 @@ export default function ProfileCreationScreen({ onComplete, logoUri }: Props) {
               </View>
             </View>
           )}
+
+          {!!saveError && (
+            <Text style={{ color: '#b91c1c', fontWeight: '700', marginTop: 8, textAlign: 'center' }}>
+              {saveError}
+            </Text>
+          )}
         </ScrollView>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Pressable disabled={step === 1} onPress={handleBack} style={[styles.backBtn, step === 1 && { opacity: 0.6 }]}>
+          <Pressable
+            disabled={step === 1 || saving}
+            onPress={handleBack}
+            style={[styles.backBtn, (step === 1 || saving) && { opacity: 0.6 }]}
+          >
             <Text style={styles.backText}>Back</Text>
           </Pressable>
 
-          <Pressable disabled={!canProceed} onPress={handleNext} style={{ flex: 1 }}>
+          <Pressable
+            disabled={!canProceed || saving}
+            onPress={handleNext}
+            style={{ flex: 1 }}
+          >
             {canProceed ? (
-              <PrimaryCTA text={step === TOTAL_STEPS ? 'Complete' : 'Continue'} />
+              <PrimaryCTA text={saving ? 'Saving...' : step === TOTAL_STEPS ? 'Complete' : 'Continue'} />
             ) : (
               <View style={styles.ctaDisabled}>
-                <Text style={[styles.ctaText, { color: '#9aa4b2' }]}>{step === TOTAL_STEPS ? 'Complete' : 'Continue'}</Text>
+                <Text style={[styles.ctaText, { color: '#9aa4b2' }]}>
+                  {step === TOTAL_STEPS ? 'Complete' : 'Continue'}
+                </Text>
                 <ChevronRight size={18} color="#9aa4b2" />
               </View>
             )}
@@ -741,3 +807,4 @@ const styles = StyleSheet.create({
   },
   ctaText: { color: '#fff', fontWeight: '900' },
 });
+

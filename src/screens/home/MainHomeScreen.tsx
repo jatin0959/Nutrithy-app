@@ -1,5 +1,5 @@
 // MainHomeScreen.tsx
-import React, { useState, memo } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,50 +7,47 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  TextInput,
   Dimensions,
   Platform,
+  RefreshControl,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useNavigation } from '@react-navigation/native';
-import type { NavigationProp } from '@react-navigation/native';
-import type { MainTabParamList } from '../../navigation/MainNavigator';
-
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
+import { registerForPushNotificationsAsync } from '../../lib/notifications';
+
 
 import {
-  Search,
   Calendar,
-  Sparkles,
   ChevronRight,
   Star,
-  Trophy,
-  ShoppingCart,
-  User,
   Bell,
-  Plus,
-  Zap,
   Flame,
-  Target,
+  Moon,
 } from 'lucide-react-native';
+
+import {
+  connectGoogleFit,
+  getLast7DaysSteps,
+  getTodaySteps,
+  isGoogleFitConnected,
+} from '../../lib/googleFit';
+
+// 👇 import challenge APIs + types
+import {
+  getNotifications,
+  getChallenges,
+  getChallengeDay,
+  type ChallengeDayTask,
+} from '../../api/thrive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-type TabKey = 'home' | 'services' | 'shop' | 'game';
-
 interface MainHomeScreenProps {
-  onNavigate: (screen: string) => void;
   logoUri?: string;
 }
-
-const stories = [
-  { id: 1, title: 'Your Story', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200', hasNew: false, isYou: true },
-  { id: 2, title: 'Priya', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200', hasNew: true },
-  { id: 3, title: 'Rahul', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200', hasNew: true },
-  { id: 4, title: 'Anita', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200', hasNew: false },
-  { id: 5, title: 'Vikram', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200', hasNew: true }
-];
 
 const services = [
   {
@@ -58,57 +55,332 @@ const services = [
     title: 'Expert Consultation',
     subtitle: '1-on-1 with nutritionists',
     image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600',
-    gradient: ['#ec4899', '#f43f5e'],
+    gradient: ['#ec4899', '#db2777'],
   },
   {
     id: 'wellness',
     title: 'Corporate Wellness',
     subtitle: 'Team health programs',
     image: 'https://images.unsplash.com/photo-1574126154517-d1e0d89ef734?w=600',
-    gradient: ['#8b5cf6', '#6366f1'],
-  },
-  {
-    id: 'fitness',
-    title: 'Fitness Plans',
-    subtitle: 'Personalized workouts',
-    image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=600',
-    gradient: ['#f59e0b', '#ef4444'],
+    gradient: ['#7c3aed', '#a855f7'],
   },
 ];
 
-const products = [
-  { id: 1, name: 'Premium Protein Powder', category: 'Protein', price: '₹1,299', originalPrice: '₹1,599', rating: 4.8, reviews: 234, image: 'https://images.unsplash.com/photo-1693996045346-d0a9b9470909?w=600', tag: 'Bestseller', inStock: true },
-  { id: 2, name: 'Daily Multivitamins', category: 'Vitamins', price: '₹899', originalPrice: '₹1,099', rating: 4.6, reviews: 189, image: 'https://images.unsplash.com/photo-1648139347040-857f024f8da4?w=600', tag: 'New', inStock: true },
-  { id: 3, name: 'Omega-3 Fish Oil', category: 'Health', price: '₹749', rating: 4.7, reviews: 156, image: 'https://images.unsplash.com/photo-1576437293196-fc3080b75964?w=600', tag: 'Top Rated', inStock: true },
-  { id: 4, name: 'Green Superfood Powder', category: 'Supplements', price: '₹1,499', originalPrice: '₹1,799', rating: 4.9, reviews: 298, image: 'https://images.unsplash.com/photo-1708573106044-2bbefb3d9fc3?w=600', tag: 'Organic', inStock: true },
-  { id: 5, name: 'Collagen Beauty Blend', category: 'Beauty', price: '₹1,899', originalPrice: '₹2,299', rating: 4.8, reviews: 167, image: 'https://images.unsplash.com/photo-1689841175766-a5abc64b9903?w=600', tag: 'Premium', inStock: true },
-  { id: 6, name: 'Herbal Wellness Tea', category: 'Beverages', price: '₹599', rating: 4.5, reviews: 143, image: 'https://images.unsplash.com/photo-1594137052297-e55c3c6b33f9?w=600', tag: '☕ Popular', inStock: true },
-  { id: 7, name: 'Energy Protein Bars', category: 'Snacks', price: '₹449', rating: 4.6, reviews: 201, image: 'https://images.unsplash.com/photo-1597776776796-092650d7afed?w=600', tag: '⚡ Quick Fuel', inStock: true },
-  { id: 8, name: 'Probiotic Complex', category: 'Digestive', price: '₹1,199', rating: 4.7, reviews: 178, image: 'https://images.unsplash.com/photo-1620755848138-dd2cbb2781c5?w=600', tag: '🦠 Health', inStock: true },
-  { id: 9, name: 'Turmeric Curcumin', category: 'Immunity', price: '₹849', rating: 4.8, reviews: 192, image: 'https://images.unsplash.com/photo-1621586862188-1b91f76f8c72?w=600', tag: '🛡️ Immunity', inStock: true },
-  { id: 10, name: 'Meal Replacement Shake', category: 'Nutrition', price: '₹1,399', originalPrice: '₹1,699', rating: 4.6, reviews: 164, image: 'https://images.unsplash.com/photo-1584116831289-e53912463c35?w=600', tag: 'Complete', inStock: true },
-];
+const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-export function MainHomeScreen({ onNavigate, logoUri }: MainHomeScreenProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>('home');
+// Fallback mock data in case Google Fit is not connected / errors
+const MOCK_WEEK_STEPS = [8247, 10532, 9874, 12034, 9345, 7622, 11012];
+const WEEK_SLEEP = [7.8, 6.9, 8.2, 7.1, 7.6, 8.0, 6.8];
 
-  const navigation = useNavigation<NavigationProp<MainTabParamList>>();
-  const go = (screen: keyof MainTabParamList | string) => {
-    if (typeof onNavigate === 'function') {
-      onNavigate(screen);
+const DEFAULT_STEP_GOAL = 5000; // ✅ as per requirement
+const GOAL_SLEEP = 8;
+
+// rough average: ~0.04 kcal per step (40 kcal / 1000 steps)
+const CALORIES_PER_STEP = 0.04;
+
+// --- helpers: extract step goal from challenge tasks ---
+
+function extractStepGoalFromTasks(tasks: ChallengeDayTask[]): number | null {
+  for (const t of tasks) {
+    const text = `${t.taskName || ''} ${t.taskDesc || ''}`.toLowerCase();
+    if (!text.includes('step')) continue;
+
+    // matches e.g. "5000 steps", "10,000 steps", "5k steps", "5 k steps"
+    const match = text.match(/(\d[\d,]*)(\s*k)?\s*steps?/i);
+    if (match) {
+      let numStr = match[1].replace(/,/g, '');
+      let value = parseInt(numStr, 10);
+      if (Number.isNaN(value)) continue;
+
+      const hasK = !!match[2];
+      if (hasK) value = value * 1000;
+
+      return value;
+    }
+  }
+  return null;
+}
+
+export function MainHomeScreen({ logoUri }: MainHomeScreenProps) {
+  const navigation = useNavigation<any>();
+
+  const [fitConnected, setFitConnected] = useState(false);
+  const [fitLoading, setFitLoading] = useState(false);
+
+  const [todaySteps, setTodaySteps] = useState<number | null>(null);
+  const [weekSteps, setWeekSteps] = useState<number[] | null>(null);
+  const [stepsLoading, setStepsLoading] = useState(false);
+
+  const [displayName, setDisplayName] = useState('Nutrithy member');
+  const [refreshing, setRefreshing] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
+  // challenge / daily-task related state
+  const [stepGoal, setStepGoal] = useState<number>(DEFAULT_STEP_GOAL);
+  const [dailyTasks, setDailyTasks] = useState<ChallengeDayTask[] | null>(null);
+  const [tasksMessage, setTasksMessage] = useState<string | null>(null);
+
+  const lastNightSleep = 7.6;
+
+  // --- navigation helper ---
+
+  function onNavigate(dest: string): void {
+    if (!navigation || typeof navigation.navigate !== 'function') {
+      console.warn('Navigation not available');
       return;
     }
-    navigation.navigate(screen as any);
+
+    try {
+      if (dest.startsWith('service-')) {
+        const [, id] = dest.split('-');
+        navigation.navigate('ServiceDetail' as any, { id });
+        return;
+      }
+
+      switch (dest) {
+        case 'tasks':
+          navigation.navigate('Tasks' as any);
+          break;
+        case 'services':
+          navigation.navigate('Services' as any);
+          break;
+        case 'consultation':
+          navigation.navigate('Consultation' as any);
+          break;
+        case 'CoinsRewards':
+          navigation.navigate('CoinsRewards' as any);
+          break;
+        default:
+          navigation.navigate(dest as any);
+      }
+    } catch (err) {
+      console.warn('Navigation failed for', dest, err);
+    }
+  }
+
+  // --- Google Fit steps ---
+
+  const loadStepsFromFit = async () => {
+    try {
+      setStepsLoading(true);
+      const [today, week] = await Promise.all([
+        getTodaySteps(),
+        getLast7DaysSteps(),
+      ]);
+
+      if (today != null) setTodaySteps(today);
+      if (Array.isArray(week) && week.length) setWeekSteps(week);
+    } catch (e) {
+      console.log('[HOME_LOAD_STEPS_ERROR]', e);
+    } finally {
+      setStepsLoading(false);
+    }
   };
 
-  const handleTabChange = (tab: TabKey) => {
-    setActiveTab(tab);
-    if (tab === 'game') onNavigate('home');
+  const handleConnectGoogleFit = async () => {
+    try {
+      setFitLoading(true);
+      const ok = await connectGoogleFit();
+      console.log('[HOME] connectGoogleFit ok=', ok);
+      setFitConnected(ok);
+      if (ok) {
+        await loadStepsFromFit();
+      }
+    } finally {
+      setFitLoading(false);
+    }
   };
 
-  const progress = 0.82;
-  const R = 35;
-  const CIRC = 2 * Math.PI * R;
+  // --- Challenges / Daily Tasks: load joined challenge + today’s day ---
+
+  const loadChallengeTasksAndGoal = async () => {
+    try {
+      console.log('[HOME] loading challenges & challengeDay');
+      setTasksMessage(null);
+
+      const challengesRes = await getChallenges({ status: 'active', limit: 10 });
+      const joined =
+        challengesRes.items.find((c) => c.joined) || challengesRes.items[0];
+
+      if (!joined) {
+        console.log('[HOME] no active challenges found');
+        setDailyTasks([]);
+        setStepGoal(DEFAULT_STEP_GOAL);
+        setTasksMessage('Join a challenge to start getting daily tasks.');
+        return;
+      }
+
+      // today as YYYY-MM-DD
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+
+      const dayPayload = await getChallengeDay(joined.id, todayStr);
+      console.log('[HOME] challenge day payload:', JSON.stringify(dayPayload));
+
+      const tasks = dayPayload.tasks || [];
+      setDailyTasks(tasks);
+
+      if (dayPayload.status === 'pending' || tasks.length === 0) {
+        // ✅ requirement: show message when task not assigned / not active
+        setTasksMessage(
+          "Today's challenge tasks are not active yet. You'll be notified once they go live."
+        );
+        setStepGoal(DEFAULT_STEP_GOAL);
+        return;
+      }
+
+      const extractedGoal = extractStepGoalFromTasks(tasks);
+      if (extractedGoal) {
+        setStepGoal(extractedGoal);
+      } else {
+        setStepGoal(DEFAULT_STEP_GOAL); // fallback 5k
+      }
+    } catch (e) {
+      console.log('[HOME] loadChallengeTasksAndGoal error', e);
+      setTasksMessage("Couldn't load today’s challenge tasks.");
+      setStepGoal(DEFAULT_STEP_GOAL);
+    }
+  };
+
+  // --- Refresh (pull-down + header tap) ---
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+
+      const connected = await isGoogleFitConnected();
+      setFitConnected(connected);
+      if (connected) {
+        await loadStepsFromFit();
+      }
+
+      await loadChallengeTasksAndGoal();
+    } catch (e) {
+      console.log('[HOME_REFRESH_ERROR]', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // On mount → load user name, Google Fit, challenges & tasks
+  useEffect(() => {
+    let isMounted = true;
+
+    (async () => {
+      // 1) Register device for push notifications (once after login)
+      try {
+        await registerForPushNotificationsAsync();
+      } catch (e) {
+        console.log('[PUSH_REGISTER_ERROR]', e);
+      }
+
+      // 2) Load stored user display name
+      try {
+        const storedName = await AsyncStorage.getItem('userName');
+        if (storedName && isMounted) {
+          setDisplayName(storedName);
+        }
+      } catch (e) {
+        console.warn('[LOAD_USER_NAME_ERROR]', e);
+      }
+
+      // 3) Google Fit status + steps
+      try {
+        const connected = await isGoogleFitConnected();
+        if (!isMounted) return;
+
+        setFitConnected(connected);
+        if (connected) {
+          await loadStepsFromFit();
+        }
+      } catch (e) {
+        console.log('[HOME_LOAD_STEPS_ERROR]', e);
+      }
+
+      // 4) Challenge day + tasks + step goal
+      try {
+        if (!isMounted) return;
+        await loadChallengeTasksAndGoal();
+      } catch (e) {
+        console.log('[HOME_LOAD_CHALLENGE_TASKS_ERROR]', e);
+      }
+
+      // 5) Quick unread notifications check (for bell badge)
+      try {
+        if (!isMounted) return;
+        const res = await getNotifications(5); // small batch is enough
+        const anyUnread = res.items.some((n) => !n.read);
+        setHasUnread(anyUnread);
+      } catch (e) {
+        console.log('[HOME_CHECK_UNREAD_NOTIFICATIONS_ERROR]', e);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+
+
+  // --- derived values ---
+
+  const effectiveTodaySteps = useMemo(
+    () =>
+      todaySteps != null
+        ? todaySteps
+        : MOCK_WEEK_STEPS[MOCK_WEEK_STEPS.length - 1],
+    [todaySteps]
+  );
+
+  const stepsSeries = useMemo(
+    () => (weekSteps && weekSteps.length === 7 ? weekSteps : MOCK_WEEK_STEPS),
+    [weekSteps]
+  );
+
+  const todayGoal = stepGoal;
+  const todayProgress = Math.min(effectiveTodaySteps / todayGoal, 1);
+
+  // REAL calorie burn based on real steps (falls back to mock only if steps are mocked)
+  const todayCalories = useMemo(
+    () => Math.round(effectiveTodaySteps * CALORIES_PER_STEP),
+    [effectiveTodaySteps]
+  );
+
+  const avgSteps =
+    stepsSeries.reduce((a, b) => a + b, 0) / stepsSeries.length;
+  const avgSleep =
+    WEEK_SLEEP.reduce((a, b) => a + b, 0) / WEEK_SLEEP.length;
+
+  // map ChallengeDayTask -> UI tasks
+  const uiTasks = useMemo(() => {
+    if (!dailyTasks || dailyTasks.length === 0) return null;
+
+    return dailyTasks.map((t) => {
+      const text = `${t.taskName || ''} ${t.taskDesc || ''}`.toLowerCase();
+      const isStepTask = text.includes('step');
+
+      let progress = 0;
+      let completed = t.status === 'completed';
+
+      if (isStepTask) {
+        progress = Math.round(Math.min(effectiveTodaySteps / todayGoal, 1) * 100);
+        if (progress >= 100) completed = true;
+      } else {
+        progress = t.status === 'completed' ? 100 : 0;
+      }
+
+      return {
+        id: t.taskId,
+        label: t.taskName || t.taskDesc || 'Task',
+        progress,
+        completed,
+        coins: t.points ?? 0,
+      };
+    });
+  }, [dailyTasks, effectiveTodaySteps, todayGoal]);
 
   return (
     <View style={s.container}>
@@ -117,152 +389,296 @@ export function MainHomeScreen({ onNavigate, logoUri }: MainHomeScreenProps) {
         <View style={s.headerRow}>
           <View style={s.brandRow}>
             <Image
-              source={logoUri ? { uri: logoUri } : require('../../assets/images/logo.png')}
+              source={
+                logoUri
+                  ? { uri: logoUri }
+                  : require('../../assets/images/logo.png')
+              }
               style={[s.logo, s.logoFallback]}
             />
             <Text style={s.brand}>Nutrithy</Text>
           </View>
 
           <View style={s.headerActions}>
+            {/* Tap bell area to refresh */}
             <Pressable
-              onPress={() => onNavigate('notifications')}
               style={s.iconBtn}
-              android_ripple={{ color: 'rgba(0,0,0,0.06)', borderless: true }}
+              onPress={() => navigation.navigate('Notifications')}
+              onLongPress={handleRefresh} // optional: keep long-press for refresh
             >
               <Bell size={20} color="#374151" />
-              <View style={s.badge} />
+              {hasUnread && <View style={s.badge} />}
             </Pressable>
 
-            <Pressable style={s.iconBtn} android_ripple={{ color: 'rgba(0,0,0,0.06)', borderless: true }}>
-              <ShoppingCart size={20} color="#374151" />
-              <View style={s.badge} />
-            </Pressable>
-
-            <Pressable onPress={() => go('Profile')} style={s.avatarWrap}>
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' }}
-                style={s.avatar}
-              />
-            </Pressable>
           </View>
         </View>
       </View>
 
       {/* Content */}
       <View style={s.content}>
-        {activeTab === 'home' && (
-          <ScrollView contentContainerStyle={{ paddingBottom: 96 }} showsVerticalScrollIndicator={false}>
-            {/* Stories */}
-            <View style={s.block}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.storiesRow}>
-                {stories.map((story) => (
-                  <View key={story.id} style={s.storyItem}>
-                    <LinearGradient
-                      colors={story.hasNew ? ['#ec4899', '#a855f7'] : ['#d1d5db', '#d1d5db']}
-                      start={{ x: 0, y: 1 }}
-                      end={{ x: 1, y: 0 }}
-                      style={s.storyRing}
-                    >
-                      <View style={s.storyInner}>
-                        <Image source={{ uri: story.image }} style={s.storyImage} />
-                      </View>
-
-                      {story.isYou && (
-                        <View style={s.storyPlus}>
-                          <Plus size={12} color="#fff" />
-                        </View>
-                      )}
-                    </LinearGradient>
-                    <Text style={s.storyLabel} numberOfLines={1}>{story.title}</Text>
-                  </View>
-                ))}
-              </ScrollView>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 96 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        >
+          {/* Greeting & Coins */}
+          <View style={[s.block, s.whiteCard]}>
+            <View style={s.rowBetween}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.subtle}>Good Morning</Text>
+                <Text style={s.h2}>{displayName}</Text>
+                <Text style={s.subtleSmall}>
+                  Let’s close your rings & finish today’s tasks.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => navigation.navigate('CoinsRewards')}
+                style={s.coinBtn}
+              >
+                <Star size={16} color="#fff" fill="#fff" />
+                <Text style={s.coinText}>850</Text>
+              </Pressable>
             </View>
+          </View>
 
-            {/* Greeting & Coins */}
-            <View style={[s.block, s.whiteCard]}>
-              <View style={s.rowBetween}>
-                <View>
-                  <Text style={s.subtle}>Good Morning</Text>
-                  <Text style={s.h2}>Priya Sharma</Text>
+          {/* Google Fit connect CTA */}
+          {!fitConnected && (
+            <View style={s.block}>
+              <View
+                style={[
+                  s.whiteCard,
+                  { flexDirection: 'row', alignItems: 'center' },
+                ]}
+              >
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={s.h3}>Connect Google Fit</Text>
+                  <Text style={s.subtleSmall}>
+                    Sync your steps and activity automatically to keep your
+                    dashboard and challenges up to date.
+                  </Text>
                 </View>
-                <Pressable onPress={() => onNavigate('coins')} style={s.coinBtn}>
-                  <Star size={16} color="#fff" fill="#fff" />
-                  <Text style={s.coinText}>850</Text>
+
+                <Pressable
+                  onPress={handleConnectGoogleFit}
+                  disabled={fitLoading}
+                  style={[
+                    s.coinBtn,
+                    { paddingHorizontal: 16 },
+                    fitLoading && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={s.coinText}>
+                    {fitLoading ? 'Connecting…' : 'Connect'}
+                  </Text>
                 </Pressable>
               </View>
             </View>
+          )}
 
-            {/* Today's Progress */}
-            <View style={s.block}>
-              <LinearGradient colors={['#ec4899', '#7c3aed']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.progressCard}>
-                <View style={s.rowBetween}>
-                  <View>
-                    <Text style={s.progressLabel}>Today's Progress</Text>
-                    <Text style={s.progressSteps}>8,247 steps</Text>
-                    <Text style={s.progressGoal}>Goal: 10,000 steps</Text>
-                  </View>
+          {/* Today – steps snapshot */}
+          <View style={s.block}>
+            <LinearGradient
+              colors={['#ec4899', '#7c3aed']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.progressCard}
+            >
+              <View style={s.rowBetween}>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={s.progressLabel}>Today</Text>
+                  <Text style={s.progressSteps}>
+                    {stepsLoading
+                      ? '…'
+                      : effectiveTodaySteps.toLocaleString()}{' '}
+                    steps
+                  </Text>
+                  <Text style={s.progressGoal}>
+                    Goal: {todayGoal.toLocaleString()} steps
+                  </Text>
 
-                  {/* Right: circular progress */}
-                  <View style={s.progressRingWrap}>
-                    <Svg width={92} height={92} style={s.progressSvg}>
-                      {/* track */}
-                      <Circle cx={46} cy={46} r={38} stroke="rgba(255,255,255,0.25)" strokeWidth={8} fill="none" />
-                      {/* progress */}
-                      <Circle
-                        cx={46}
-                        cy={46}
-                        r={38}
-                        stroke="#fff"
-                        strokeWidth={8}
-                        fill="none"
-                        strokeDasharray={2 * Math.PI * 38}
-                        strokeDashoffset={(2 * Math.PI * 38) * (1 - progress)}
-                        strokeLinecap="round"
-                      />
-                    </Svg>
-
-                    {/* inner chip for 82% */}
-                    <View style={s.progressInner}>
-                      <Text style={s.progressPct}>82%</Text>
+                  <View style={s.todayRow}>
+                    {/* 🔥 Calories burned (real data from current steps) */}
+                    <View style={s.todayItem}>
+                      <Flame size={18} color="#ffffff" />
+                      <View style={s.todayItemTextWrap}>
+                        <Text style={s.todayItemLabel}>Calories burned</Text>
+                        <Text style={s.todayItemValue}>
+                          {stepsLoading
+                            ? '…'
+                            : `${todayCalories.toLocaleString()} kcal`}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-
                 </View>
 
-                <View style={s.progressStatsRow}>
-                  <View style={s.statPill}>
-                    <Flame size={20} color="#fff" />
-                    <Text style={s.statValue}>12</Text>
-                    <Text style={s.statLabel}>Day Streak</Text>
-                  </View>
-                  <View style={s.statPill}>
-                    <Zap size={20} color="#fff" />
-                    <Text style={s.statValue}>342</Text>
-                    <Text style={s.statLabel}>Calories</Text>
-                  </View>
-                  <View style={s.statPill}>
-                    <Target size={20} color="#fff" />
-                    <Text style={s.statValue}>3/5</Text>
-                    <Text style={s.statLabel}>Goals</Text>
+                {/* Right: circular progress */}
+                <View style={s.progressRingWrap}>
+                  <Svg width={92} height={92} style={s.progressSvg}>
+                    <Circle
+                      cx={46}
+                      cy={46}
+                      r={38}
+                      stroke="rgba(255,255,255,0.25)"
+                      strokeWidth={8}
+                      fill="none"
+                    />
+                    <Circle
+                      cx={46}
+                      cy={46}
+                      r={38}
+                      stroke="#fff"
+                      strokeWidth={8}
+                      fill="none"
+                      strokeDasharray={2 * Math.PI * 38}
+                      strokeDashoffset={
+                        2 * Math.PI * 38 * (1 - todayProgress)
+                      }
+                      strokeLinecap="round"
+                    />
+                  </Svg>
+
+                  <View style={s.progressInner}>
+                    <Text style={s.progressPct}>
+                      {Math.round(todayProgress * 100)}%
+                    </Text>
                   </View>
                 </View>
-              </LinearGradient>
-            </View>
+              </View>
+            </LinearGradient>
+          </View>
 
-            {/* Daily Tasks */}
-            <View style={s.block}>
-              <View style={s.rowBetween}>
-                <Text style={s.h3}>Daily Tasks</Text>
-                <Pressable><Text style={s.linkPink}>View All</Text></Pressable>
+          {/* Sleep card (still mocked) */}
+          <View style={s.block}>
+            <View style={[s.whiteCard, s.sleepCard]}>
+              <View style={s.sleepHeaderRow}>
+                <View style={s.row}>
+                  <View style={s.sleepIconWrap}>
+                    <Moon size={18} color="#ec4899" />
+                  </View>
+                  <View>
+                    <Text style={s.h3}>Last night</Text>
+                    <Text style={s.subtle}>
+                      {lastNightSleep.toFixed(1)} hrs · Deep & restful
+                    </Text>
+                  </View>
+                </View>
               </View>
 
-              <View style={{ rowGap: 8 }}>
-                {[
-                  { id: 1, task: 'Complete 10,000 steps', progress: 82, completed: false, coins: 50 },
-                  { id: 2, task: 'Drink 8 glasses of water', progress: 100, completed: true, coins: 20 },
-                  { id: 3, task: 'Log your meals', progress: 66, completed: false, coins: 30 },
-                ].map((task) => (
+              <View style={s.sleepRow}>
+                <View style={s.sleepMetaBlock}>
+                  <Text style={s.subtleSmall}>Bedtime</Text>
+                  <Text style={s.sleepMetaValue}>11:15 pm</Text>
+                </View>
+                <View style={s.sleepMetaBlock}>
+                  <Text style={s.subtleSmall}>Wake up</Text>
+                  <Text style={s.sleepMetaValue}>6:55 am</Text>
+                </View>
+                <View style={s.sleepMetaBlock}>
+                  <Text style={s.subtleSmall}>Consistency</Text>
+                  <Text style={s.sleepMetaValue}>4 / 5</Text>
+                </View>
+              </View>
+
+              <View style={s.sleepSourceRow}>
+                <View style={s.sourcePill}>
+                  <View style={s.sourceDot} />
+                  <Text style={s.sourceText}>
+                    Syncing with Google Fit / Apple Health
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Weekly charts – steps & sleep */}
+          <View style={s.block}>
+            <View style={[s.whiteCard, { paddingVertical: 16 }]}>
+              <Text style={[s.h3, { marginBottom: 10 }]}>This week</Text>
+
+              {/* Steps chart */}
+              <View style={s.chartSection}>
+                <View style={s.rowBetween}>
+                  <Text style={s.chartTitle}>Steps</Text>
+                  <Text style={s.chartMeta}>
+                    Avg {Math.round(avgSteps).toLocaleString()} /day
+                  </Text>
+                </View>
+                <View style={s.chartBarsRow}>
+                  {stepsSeries.map((value, idx) => {
+                    const ratio = Math.min(value / todayGoal, 1);
+                    return (
+                      <View key={idx} style={s.chartBarItem}>
+                        <View style={s.chartBarTrack}>
+                          <View style={s.chartGoalCap} />
+                          <View
+                            style={[
+                              s.chartBarFillSteps,
+                              { height: `${Math.max(ratio * 100, 8)}%` },
+                            ]}
+                          />
+                        </View>
+                        <Text style={s.chartDayLabel}>{WEEK_DAYS[idx]}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={s.divider} />
+
+              {/* Sleep chart */}
+              <View style={s.chartSection}>
+                <View style={s.rowBetween}>
+                  <Text style={s.chartTitle}>Sleep</Text>
+                  <Text style={s.chartMeta}>
+                    Avg {avgSleep.toFixed(1)} hrs
+                  </Text>
+                </View>
+                <View style={s.chartBarsRow}>
+                  {WEEK_SLEEP.map((value, idx) => {
+                    const ratio = Math.min(value / GOAL_SLEEP, 1);
+                    return (
+                      <View key={idx} style={s.chartBarItem}>
+                        <View style={s.chartBarTrack}>
+                          <View style={s.chartGoalCap} />
+                          <View
+                            style={[
+                              s.chartBarFillSleep,
+                              { height: `${Math.max(ratio * 100, 10)}%` },
+                            ]}
+                          />
+                        </View>
+                        <Text style={s.chartDayLabel}>{WEEK_DAYS[idx]}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Daily Tasks */}
+          <View style={s.block}>
+            <View style={s.rowBetween}>
+              <Text style={s.h3}>Daily tasks</Text>
+              <Pressable onPress={() => onNavigate('tasks')}>
+                <Text style={s.linkPink}>View all</Text>
+              </Pressable>
+            </View>
+
+            {/* message when tasks not yet active */}
+            {tasksMessage && (
+              <Text style={[s.subtleSmall, { marginBottom: 8 }]}>
+                {tasksMessage}
+              </Text>
+            )}
+
+            <View style={{ rowGap: 8 }}>
+              {uiTasks && uiTasks.length > 0 ? (
+                uiTasks.map((task) => (
                   <View
                     key={task.id}
                     style={[
@@ -272,14 +688,24 @@ export function MainHomeScreen({ onNavigate, logoUri }: MainHomeScreenProps) {
                   >
                     <View style={s.rowBetween}>
                       <View style={s.row}>
-                        <View style={[s.chk, task.completed ? s.chkOn : s.chkOff]}>
-                          {task.completed && <ChevronRight size={14} color="#fff" />}
+                        <View
+                          style={[
+                            s.chk,
+                            task.completed ? s.chkOn : s.chkOff,
+                          ]}
+                        >
+                          {task.completed && (
+                            <ChevronRight size={14} color="#fff" />
+                          )}
                         </View>
                         <Text
-                          style={[s.taskText, task.completed ? s.taskTextDone : undefined]}
+                          style={[
+                            s.taskText,
+                            task.completed ? s.taskTextDone : undefined,
+                          ]}
                           numberOfLines={2}
                         >
-                          {task.task}
+                          {task.label}
                         </Text>
                       </View>
                       <View style={s.row}>
@@ -291,225 +717,114 @@ export function MainHomeScreen({ onNavigate, logoUri }: MainHomeScreenProps) {
                     {!task.completed && (
                       <View style={{ marginLeft: 28, marginTop: 8 }}>
                         <View style={s.progressBarBg}>
-                          <View style={[s.progressBarFill, { width: `${task.progress}%` }]} />
+                          <View
+                            style={[
+                              s.progressBarFill,
+                              { width: `${task.progress}%` },
+                            ]}
+                          />
                         </View>
-                        <Text style={s.progressSmall}>{task.progress}% complete</Text>
+                        <Text style={s.progressSmall}>
+                          {task.progress}% complete
+                        </Text>
                       </View>
                     )}
                   </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Quick Actions */}
-            <View style={s.block}>
-              <Text style={s.h3}>Quick Actions</Text>
-              <View style={s.quickGrid}>
-                {[
-                  { id: 1, label: 'Services', icon: Sparkles, screen: 'services', gradient: ['#ec4899', '#f43f5e'] },
-                  { id: 2, label: 'Profile', icon: User, screen: 'new-profile', gradient: ['#8b5cf6', '#6366f1'] },
-                  { id: 3, label: 'Rewards', icon: Star, screen: 'coins', gradient: ['#f59e0b', '#f97316'] },
-                  { id: 4, label: 'Game', icon: Trophy, screen: 'home', gradient: ['#3b82f6', '#06b6d4'] },
-                ].map((action) => (
-                  <Pressable key={action.id} style={s.quickItem} onPress={() => onNavigate(action.screen)}>
-                    <LinearGradient colors={action.gradient} style={s.quickIconBox}>
-                      <action.icon size={24} color="#fff" />
-                    </LinearGradient>
-                    <Text style={s.quickLabel} numberOfLines={1}>{action.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Services Feed */}
-            <View style={s.block}>
-              <View style={s.rowBetween}>
-                <Text style={s.h3}>Services</Text>
-                <Pressable onPress={() => onNavigate('services')}>
-                  <Text style={s.linkPink}>See all</Text>
-                </Pressable>
-              </View>
-
-              <View style={{ rowGap: 12 }}>
-                {services.slice(0, 2).map((service) => (
-                  <Pressable
-                    key={service.id}
-                    onPress={() => onNavigate(`service-${service.id}`)}
-                    style={s.serviceCard}
+                ))
+              ) : (
+                // fallback if no tasks loaded AND no message:
+                !tasksMessage && (
+                  <View
+                    style={[
+                      s.taskCard,
+                      s.taskCardTodo,
+                      { borderStyle: 'dashed' },
+                    ]}
                   >
-                    <Image source={{ uri: service.image }} style={s.serviceImage} />
-                    <LinearGradient colors={service.gradient} style={s.serviceOverlay} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-                    <View style={s.serviceContent}>
-                      <View>
-                        <Text style={s.serviceTitle}>{service.title}</Text>
-                        <Text style={s.serviceSubtitle}>{service.subtitle}</Text>
-                      </View>
-                      <View style={s.serviceBtn}>
-                        <Text style={s.serviceBtnText}>Book Now</Text>
-                      </View>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Quick Access */}
-            <View style={[s.block, s.whiteCard, { marginTop: 8 }]}>
-              <Text style={s.h3}>Quick Access</Text>
-              <View style={s.quickAccessRow}>
-                <Pressable onPress={() => onNavigate('home')} style={[s.accessCard, { backgroundColor: '#ec4899' }]}>
-                  <Trophy size={28} color="#fff" />
-                  <Text style={s.accessTitle}>Wellness Game</Text>
-                  <Text style={s.accessSubtitle}>Play & Earn</Text>
-                </Pressable>
-                <Pressable onPress={() => onNavigate('consultation')} style={[s.accessCard, { backgroundColor: '#6366f1' }]}>
-                  <Calendar size={28} color="#fff" />
-                  <Text style={s.accessTitle}>Book Expert</Text>
-                  <Text style={s.accessSubtitle}>Get advice</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Shop Feed */}
-            <View style={[s.block, { paddingBottom: 20 }]}>
-              <View style={s.rowBetween}>
-                <Text style={s.h3}>Shop</Text>
-                <Pressable onPress={() => setActiveTab('shop')}>
-                  <Text style={s.linkPink}>See all</Text>
-                </Pressable>
-              </View>
-
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 12 }}>
-                {products.slice(0, 6).map((product) => (
-                  <Pressable
-                    key={product.id}
-                    onPress={() => onNavigate(`product-${product.id}`)}
-                    style={s.productCardSmall}
-                  >
-                    <View style={s.productImageWrap}>
-                      <Image source={{ uri: product.image }} style={s.productImage} />
-                      <View style={s.productTag}>
-                        <Text style={s.productTagText}>{product.tag}</Text>
-                      </View>
-                    </View>
-                    <View style={s.productBody}>
-                      <Text style={s.productCat}>{product.category}</Text>
-                      <Text style={s.productName} numberOfLines={2}>{product.name}</Text>
-                      <View style={s.row}>
-                        <Star size={12} color="#facc15" fill="#facc15" />
-                        <Text style={s.ratingText}>{product.rating}</Text>
-                        <Text style={s.ratingCount}>({product.reviews})</Text>
-                      </View>
-                      <View style={s.rowBetween}>
-                        <View>
-                          <Text style={s.price}>{product.price}</Text>
-                          {product.originalPrice ? <Text style={s.priceStrike}>{product.originalPrice}</Text> : null}
-                        </View>
-                        <View style={s.addSmall}>
-                          <Plus size={14} color="#fff" />
-                        </View>
-                      </View>
-                    </View>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          </ScrollView>
-        )}
-
-        {activeTab === 'services' && (
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
-            {services.map((service) => (
-              <Pressable
-                key={service.id}
-                onPress={() => onNavigate(`service-${service.id}`)}
-                style={s.serviceTall}
-              >
-                <Image source={{ uri: service.image }} style={s.serviceTallImg} />
-                <LinearGradient colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)', 'transparent']} style={s.serviceTallOverlay} />
-                <View style={s.serviceTallBottom}>
-                  <Text style={s.serviceTallTitle}>{service.title}</Text>
-                  <Text style={s.serviceTallSub}>{service.subtitle}</Text>
-                  <View style={s.learnBtn}><Text style={s.learnBtnText}>Learn More</Text></View>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-
-        {activeTab === 'shop' && (
-          <ScrollView contentContainerStyle={{ paddingBottom: 96 }}>
-            <View style={[s.whiteCard, { paddingHorizontal: 16, paddingVertical: 12, marginBottom: 8 }]}>
-              <View style={{ position: 'relative' }}>
-                <Search size={18} color="#9ca3af" style={s.searchIcon} />
-                <TextInput
-                  placeholder="Search products..."
-                  placeholderTextColor="#9ca3af"
-                  style={s.searchInput}
-                />
-              </View>
-            </View>
-
-            {/* Categories */}
-            <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-                {['All', 'Protein', 'Vitamins', 'Health', 'Beauty', 'Snacks'].map((cat, idx) => {
-                  const active = idx === 0;
-                  return (
-                    <Pressable key={cat} style={[s.catChip, active ? s.catChipActive : s.catChipInactive]}>
-                      <Text style={active ? s.catTextActive : s.catTextInactive}>{cat}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* 2-column grid */}
-            <View style={s.gridWrap}>
-              {products.map((product) => (
-                <Pressable
-                  key={product.id}
-                  onPress={() => onNavigate(`product-${product.id}`)}
-                  style={s.productCard}
-                >
-                  <View style={s.productImgBigWrap}>
-                    <Image source={{ uri: product.image }} style={s.productImgBig} />
-                    <View style={s.productTag}>
-                      <Text style={s.productTagText}>{product.tag}</Text>
-                    </View>
+                    <Text style={s.subtleSmall}>
+                      No tasks for today yet. Check back soon.
+                    </Text>
                   </View>
-                  <View style={{ padding: 12 }}>
-                    <Text style={s.productCat}>{product.category}</Text>
-                    <Text style={s.productName} numberOfLines={2}>{product.name}</Text>
-                    <View style={[s.row, { marginBottom: 8 }]}>
-                      <Star size={12} color="#facc15" fill="#facc15" />
-                      <Text style={s.ratingText}>{product.rating}</Text>
-                      <Text style={s.ratingCount}>({product.reviews})</Text>
+                )
+              )}
+            </View>
+          </View>
+
+          {/* Services */}
+          <View style={s.block}>
+            <View style={s.rowBetween}>
+              <Text style={s.h3}>Services</Text>
+              <Pressable onPress={() => onNavigate('services')}>
+                <Text style={s.linkPink}>See all</Text>
+              </Pressable>
+            </View>
+
+            <View style={{ rowGap: 12 }}>
+              {services.map((service) => (
+                <Pressable
+                  key={service.id}
+                  onPress={() => onNavigate(`service-${service.id}`)}
+                  style={s.serviceCard}
+                >
+                  <Image
+                    source={{ uri: service.image }}
+                    style={s.serviceImage}
+                  />
+                  <LinearGradient
+                    colors={service.gradient}
+                    style={s.serviceOverlay}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  />
+                  <View style={s.serviceContent}>
+                    <View>
+                      <Text style={s.serviceTitle}>{service.title}</Text>
+                      <Text style={s.serviceSubtitle}>
+                        {service.subtitle}
+                      </Text>
                     </View>
-                    <View style={s.rowBetween}>
-                      <View>
-                        <Text style={s.price}>{product.price}</Text>
-                        {product.originalPrice ? <Text style={s.priceStrike}>{product.originalPrice}</Text> : null}
-                      </View>
-                      <View style={s.addSmall}>
-                        <Plus size={16} color="#fff" />
-                      </View>
+                    <View style={s.serviceBtn}>
+                      <Text style={s.serviceBtnText}>Book now</Text>
                     </View>
                   </View>
                 </Pressable>
               ))}
             </View>
-          </ScrollView>
-        )}
+          </View>
+
+          {/* Quick Access */}
+          <View style={[s.block, s.whiteCard, { marginTop: 8 }]}>
+            <Text style={s.h3}>Quick access</Text>
+            <View style={s.quickAccessRow}>
+              <Pressable
+                onPress={() => onNavigate('consultation')}
+                style={[s.accessCard, { backgroundColor: '#ec4899' }]}
+              >
+                <Calendar size={24} color="#fff" />
+                <Text style={s.accessTitle}>Book consultation</Text>
+                <Text style={s.accessSubtitle}>
+                  Talk to a Nutrithy expert
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => onNavigate('CoinsRewards')}
+                style={[s.accessCard, { backgroundColor: '#7c3aed' }]}
+              >
+                <Star size={24} color="#fff" fill="#fff" />
+                <Text style={s.accessTitle}>View rewards</Text>
+                <Text style={s.accessSubtitle}>
+                  See how to earn more coins
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
       </View>
     </View>
   );
 }
 
 const CARD_RADIUS = 20;
-
-// Handy calc for 4 icons per row (matching your spacing)
-const QUICK_ITEM_W = (SCREEN_WIDTH - 32 /*page padd*/ - 12 /*grid gap fudge*/) / 4;
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
@@ -522,7 +837,12 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
   brandRow: { flexDirection: 'row', alignItems: 'center' },
   logo: { width: 28, height: 28, borderRadius: 6, marginRight: 8 },
   logoFallback: { backgroundColor: '#f3f4f6' },
@@ -530,40 +850,57 @@ const s = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: { padding: 6, marginHorizontal: 2, borderRadius: 9999 },
   badge: {
-    position: 'absolute', top: 4, right: 4, width: 8, height: 8, backgroundColor: '#ec4899', borderRadius: 4,
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 2, shadowOffset: { width: 0, height: 1 },
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    backgroundColor: '#ec4899',
+    borderRadius: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
   },
-  avatarWrap: { width: 32, height: 32, borderRadius: 16, overflow: 'hidden', borderWidth: 2, borderColor: '#ec4899', marginLeft: 6 },
-  avatar: { width: '100%', height: '100%' },
 
   content: { flex: 1 },
   block: { paddingHorizontal: 16, paddingVertical: 12 },
   whiteCard: {
-    backgroundColor: '#fff', borderRadius: CARD_RADIUS,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2,
+    backgroundColor: '#fff',
+    borderRadius: CARD_RADIUS,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
 
-  // Stories
-  storiesRow: { columnGap: 12 },
-  storyItem: { width: 64, alignItems: 'center' },
-  storyRing: { width: 64, height: 64, borderRadius: 32, padding: 2, alignItems: 'center', justifyContent: 'center' },
-  storyInner: { width: '100%', height: '100%', backgroundColor: '#fff', borderRadius: 32, padding: 2 },
-  storyImage: { width: '100%', height: '100%', borderRadius: 32 },
-  storyPlus: {
-    position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, backgroundColor: '#ec4899',
-    borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff'
+  rowBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  storyLabel: { fontSize: 12, marginTop: 4, width: 64, color: '#111827' },
-
-  // Greeting
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   row: { flexDirection: 'row', alignItems: 'center', columnGap: 8 },
   subtle: { color: '#6b7280', fontSize: 13 },
-  h2: { color: '#111827', fontSize: 20, fontWeight: '700', marginTop: 2 },
-  coinBtn: { flexDirection: 'row', alignItems: 'center', columnGap: 6, backgroundColor: '#f59e0b', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 9999 },
+  subtleSmall: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  h2: {
+    color: '#111827',
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  coinBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 6,
+    backgroundColor: '#db2777',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 9999,
+  },
   coinText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-  // Progress card
   progressCard: {
     borderRadius: CARD_RADIUS + 6,
     padding: 20,
@@ -573,149 +910,283 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 5,
   },
-  progressLabel: { color: 'rgba(255,255,255,0.95)', fontSize: 13, marginBottom: 6 },
-  progressSteps: { color: '#fff', fontSize: 28, fontWeight: '800', lineHeight: 30 },
-  progressGoal: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 6 },
+  progressLabel: {
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  progressSteps: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: '800',
+    lineHeight: 30,
+  },
+  progressGoal: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    marginTop: 4,
+  },
 
-  /** NEW: ring + inner chip */
   progressRingWrap: { width: 92, height: 92, position: 'relative' },
-  progressSvg: { position: 'absolute', top: 0, left: 0, transform: [{ rotate: '-90deg' }] },
+  progressSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    transform: [{ rotate: '-90deg' }],
+  },
   progressInner: {
     position: 'absolute',
-    top: 10, left: 10,
-    width: 72, height: 72, borderRadius: 36,
-    alignItems: 'center', justifyContent: 'center',
+    top: 10,
+    left: 10,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.4)',
   },
   progressPct: { color: '#fff', fontSize: 18, fontWeight: '800' },
 
-  /** pills row */
-  progressStatsRow: { flexDirection: 'row', columnGap: 12, marginTop: 14 },
-  statPill: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
+  todayRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    columnGap: 10,
   },
-  statValue: { color: '#fff', fontWeight: '800', marginTop: 4, fontSize: 14 },
-  statLabel: { color: 'rgba(255,255,255,0.95)', fontSize: 12, marginTop: 2 },
+  todayItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  todayItemTextWrap: { marginLeft: 6 },
+  todayItemLabel: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+  },
+  todayItemValue: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
-  // Section headings / links
-  h3: { fontWeight: '700', color: '#111827', fontSize: 16, marginBottom: 8 },
+  sleepCard: { paddingVertical: 16 },
+  sleepHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  h3: {
+    fontWeight: '700',
+    color: '#111827',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  sleepRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    columnGap: 16,
+  },
+  sleepMetaBlock: { flex: 1 },
+  sleepMetaValue: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  sleepIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(236,72,153,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  sleepSourceRow: {
+    marginTop: 12,
+  },
+  sourcePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(236,72,153,0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  sourceDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ec4899',
+    marginRight: 6,
+  },
+  sourceText: {
+    fontSize: 11,
+    color: '#ec4899',
+  },
+
   linkPink: { color: '#db2777', fontWeight: '600', fontSize: 13 },
 
-  // Tasks
+  chartSection: {
+    marginTop: 6,
+  },
+  chartTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  chartMeta: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  chartBarsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    columnGap: 10,
+    marginTop: 10,
+  },
+  chartBarItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  chartBarTrack: {
+    width: 10,
+    height: 80,
+    borderRadius: 999,
+    backgroundColor: '#f3f4f6',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  chartGoalCap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: '#e5e7eb',
+  },
+  chartBarFillSteps: {
+    width: '100%',
+    backgroundColor: '#ec4899',
+    borderRadius: 999,
+  },
+  chartBarFillSleep: {
+    width: '100%',
+    backgroundColor: '#7c3aed',
+    borderRadius: 999,
+  },
+  chartDayLabel: {
+    marginTop: 4,
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#f3f4f6',
+    marginVertical: 12,
+  },
+
   taskCard: { borderRadius: 16, padding: 12, borderWidth: 2 },
-  taskCardDone: { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
+  taskCardDone: {
+    backgroundColor: 'rgba(236,72,153,0.05)',
+    borderColor: 'rgba(236,72,153,0.3)',
+  },
   taskCardTodo: { backgroundColor: '#fff', borderColor: '#f3f4f6' },
-  chk: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  chkOn: { backgroundColor: '#22c55e' },
+  chk: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chkOn: { backgroundColor: '#ec4899' },
   chkOff: { backgroundColor: '#e5e7eb' },
   taskText: { fontSize: 14, color: '#111827' },
-  taskTextDone: { color: '#15803d', textDecorationLine: 'line-through' },
-  coinSmall: { fontSize: 12, fontWeight: '700', color: '#4b5563', marginLeft: 4 },
-  progressBarBg: { height: 8, backgroundColor: '#e5e7eb', borderRadius: 9999, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#ec4899', borderRadius: 9999 },
-  progressSmall: { fontSize: 12, color: '#6b7280', marginTop: 4 },
-
-  // Quick actions
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
-  quickItem: { width: QUICK_ITEM_W, alignItems: 'center', marginRight: 4, marginVertical: 8 },
-  quickIconBox: {
-    width: 56, height: 56, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3,
-    marginBottom: 6,
+  taskTextDone: {
+    color: '#ec4899',
+    textDecorationLine: 'line-through',
   },
-  quickLabel: { fontSize: 12, color: '#374151', fontWeight: '600' },
+  coinSmall: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4b5563',
+    marginLeft: 4,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 9999,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#ec4899',
+    borderRadius: 9999,
+  },
+  progressSmall: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
 
-  // Services cards
   serviceCard: { height: 128, borderRadius: 16, overflow: 'hidden' },
-  serviceImage: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%' },
-  serviceOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.8, borderRadius: 16 },
-  serviceContent: { flex: 1, padding: 16, justifyContent: 'space-between' },
-  serviceTitle: { color: '#fff', fontWeight: '800', fontSize: 18, marginBottom: 4 },
-  serviceSubtitle: { color: 'rgba(255,255,255,0.95)', fontSize: 13 },
-  serviceBtn: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
-  serviceBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  serviceImage: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  serviceOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    opacity: 0.9,
+    borderRadius: 16,
+  },
+  serviceContent: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+  serviceTitle: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  serviceSubtitle: {
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 13,
+  },
+  serviceBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 12,
+  },
+  serviceBtnText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 13,
+  },
 
-  // Quick access
-  quickAccessRow: { flexDirection: 'row', columnGap: 12 },
+  quickAccessRow: { flexDirection: 'row', columnGap: 12, marginTop: 8 },
   accessCard: { flex: 1, borderRadius: 16, padding: 16 },
   accessTitle: { color: '#fff', fontWeight: '800', marginTop: 8 },
-  accessSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 },
-
-  // Shop small cards
-  productCardSmall: {
-    width: 160, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', marginRight: 12,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2,
+  accessSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    marginTop: 2,
   },
-  productImageWrap: { height: 160, backgroundColor: '#f3f4f6' },
-  productImage: { width: '100%', height: '100%' },
-  productTag: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 9999 },
-  productTagText: { fontSize: 12, fontWeight: '800', color: '#111827' },
-  productBody: { padding: 12 },
-  productCat: { fontSize: 12, color: '#6b7280', marginBottom: 4 },
-  productName: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 6 },
-  ratingText: { fontSize: 12, color: '#4b5563', marginLeft: 4 },
-  ratingCount: { fontSize: 12, color: '#9ca3af', marginLeft: 4 },
-  price: { color: '#db2777', fontWeight: '800', fontSize: 14 },
-  priceStrike: { color: '#9ca3af', fontSize: 12, textDecorationLine: 'line-through' },
-  addSmall: { width: 28, height: 28, backgroundColor: '#ec4899', borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-
-  // Services (full list)
-  serviceTall: { height: 224, borderRadius: 16, overflow: 'hidden', marginBottom: 12 },
-  serviceTallImg: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%' },
-  serviceTallOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: 16 },
-  serviceTallBottom: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20 },
-  serviceTallTitle: { color: '#fff', fontWeight: '800', fontSize: 20, marginBottom: 4 },
-  serviceTallSub: { color: 'rgba(255,255,255,0.95)', fontSize: 13, marginBottom: 10 },
-  learnBtn: { backgroundColor: '#fff', borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'flex-start' },
-  learnBtnText: { color: '#111827', fontWeight: '600', fontSize: 13 },
-
-  // Shop search & chips
-  searchIcon: { position: 'absolute', left: 12, top: 12 },
-  searchInput: { backgroundColor: '#f3f4f6', paddingVertical: 10, paddingLeft: 40, paddingRight: 12, borderRadius: 9999, fontSize: 14, color: '#111827' },
-  catChip: { borderRadius: 9999, paddingVertical: 8, paddingHorizontal: 14, marginRight: 8 },
-  catChipActive: { backgroundColor: '#db2777' },
-  catChipInactive: { backgroundColor: '#f3f4f6' },
-  catTextActive: { color: '#fff', fontWeight: '700' },
-  catTextInactive: { color: '#374151', fontWeight: '600' },
-
-  // 2-col grid
-  gridWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: 12,
-    rowGap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  productCard: {
-    width: (SCREEN_WIDTH - 16 * 2 - 12) / 2,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  productImgBigWrap: { height: 176, backgroundColor: '#f3f4f6' },
-  productImgBig: { width: '100%', height: '100%' },
-
-  // Tabs (kept here if you render custom tabs outside)
-  tabBar: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  tabRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 8 },
-  tabItem: { alignItems: 'center', paddingVertical: 6, paddingHorizontal: 8 },
-  tabLabel: { fontSize: 12, fontWeight: '600', marginTop: 2 },
-  tabDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#db2777', marginTop: 4 },
 });
 
 export default memo(MainHomeScreen);
